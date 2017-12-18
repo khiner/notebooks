@@ -1,0 +1,4 @@
+In Python you can create classes that represent real-world objects.
+In Python you can manipulate strings.
+In Python you can read and write to and from files.
+In Python you can read and manipulate user input.

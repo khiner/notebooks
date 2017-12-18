@@ -1,0 +1,53 @@
+{% load bootstrap3 %}
+
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta heep-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+
+        <title>Learning Log</title>
+
+        {% bootstrap_css %}
+        {% bootstrap_javascript %}
+    </head>
+
+    <body>
+        <nav class="navbar navbar-default navbar-static-top">
+            <div class="container">
+                <div class="navbar-header">
+                    <button type="button" class="navbar-toggle collapsed"
+                    data-toggle="collapse" data-target="#navbar"
+                    aria-expanded="false" aria-controls="navbar"/>
+                    <a class="navbar-brand" href="{% url 'index' %}">Learning Log</a>
+                </div>
+
+                <div id="navbar" class="navbar-collapse collapse">
+                    <ul class = "nav navbar-nav">
+                        <li><a href="{% url 'topics' %}">Topics</a></li>
+                    </ul>
+
+                    <ul class="nav navbar-nav navbar-right">
+                        {% if user.is_authenticated %}
+                            <li><a>Hello, {{ user.username }}.</a></li>
+                            <li><a href="{% url 'logout' %}">log out</a></li>
+                        {% else %}
+                            <li><a href="{% url 'register' %}">register</a></li>
+                            <li><a href="{% url 'login' %}">log in</a></li>
+                        {% endif %}
+                    </ul>
+                </div>
+            </div>
+        </nav>
+
+        <div class="container">
+            <div class="page-header">
+                {% block header %}{% endblock header %}
+            </div>
+            <div>
+                {% block content %}{% endblock content %}
+            </div>
+        </div>
+    </body>
+</html>
