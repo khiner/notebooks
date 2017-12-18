@@ -7,17 +7,17 @@ class Settings():
         self.screen_height = 800
         self.bg_color = (100, 100, 240)
         self.ship_limit = 3
-        self.bullet_width = 300
+        self.bullet_width = 10
         self.bullet_height = 15
         self.bullet_color = 60, 60, 60
-        self.bullets_allowed = 30
+        self.bullets_allowed = 3
         self.fleet_drop_speed = 10.0
 
         self.speedup_scale = 1.1
         self.score_scale = 1.5
 
         # For testing:
-        self.super_bullets = True
+        self.super_bullets = False
 
         self.initialize_dynamic_settings()
 
