@@ -11,10 +11,18 @@ istream& read(istream& is, Student_info& s) {
     double midterm, final;
     is >> s.name >> midterm >> final;
 
+    if (s.name.empty()) {
+        return is;
+    }
+
     vector<double> homework;
     read_hw(is, homework);
-    cout << "HW size " << homework.size() << std::endl;
-    s.finalGrade = grade(midterm, final, homework);
+    if (!homework.empty()) {
+        // I can't figure out how to get istream to just stop reading without a special end-string.
+        // It always just reads blanks into every var when I press ctrl+d
+        // So this should be treated as an error, case - it's a hack :(
+        s.finalGrade = grade(midterm, final, homework);
+    }
     return is;
 }
 
@@ -24,7 +32,6 @@ istream& read_hw(istream& in, vector<double>& hw) {
 
         double x;
         while (in >> x) {
-            cout << "Adding " << x << std::endl;
             hw.push_back(x);
         }
 
