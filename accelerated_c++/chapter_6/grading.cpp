@@ -16,18 +16,30 @@ void write_analysis(ostream& out, const string& name,
                    ", median(didnt) = " << analysis(didnt) << endl;
 }
 
+vector<Student_info> extract_didnt_do_all_hw(vector<Student_info>& students) {
+    vector<Student_info> didnt;
+    vector<Student_info>::iterator iter = students.begin();
+
+    while (iter != students.end()) {
+        if (!did_all_hw(*iter)) {
+            didnt.push_back(*iter);
+            iter = students.erase(iter);
+        } else {
+            ++iter;
+        }
+    }
+    return didnt;
+}
 
 int main() {
-    vector<Student_info> did, didnt;
+    vector<Student_info> did;
 
     Student_info student;
     while (read(cin, student)) {
-        if (did_all_hw(student)) {
-            did.push_back(student);
-        } else {
-            didnt.push_back(student);
-        }
+        did.push_back(student);
     }
+
+    vector<Student_info> didnt = extract_didnt_do_all_hw(did);
 
     if (did.empty()) {
         cout << "No student did all the homework!" << endl;

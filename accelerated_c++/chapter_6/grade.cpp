@@ -86,6 +86,13 @@ double average_analysis(const vector<Student_info>& students) {
     return median(grades);
 }
 
+double analysis(const vector<Student_info>& students, double transform_function(const Student_info&)) {
+    vector<double> grades;
+
+    transform(students.begin(), students.end(), back_inserter(grades), transform_function);
+    return median(grades);
+}
+
 bool did_all_hw(const Student_info& s) {
     return ((find(s.homework.begin(), s.homework.end(), 0)) == s.homework.end());
 }
