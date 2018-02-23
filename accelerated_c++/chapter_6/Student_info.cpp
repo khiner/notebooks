@@ -8,8 +8,7 @@ bool compare(const Student_info& x, const Student_info& y) {
 }
 
 istream& read(istream& is, Student_info& s) {
-    double midterm, final;
-    is >> s.name >> midterm >> final;
+    is >> s.name >> s.midterm >> s.final;
 
     if (s.name.empty()) {
         return is;

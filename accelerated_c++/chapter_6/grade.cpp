@@ -11,6 +11,8 @@ using std::domain_error; using std::sort; using std::vector;
 using std::accumulate; using std::transform; using std::back_inserter; using std::find;
 using std::string; using std::endl;
 
+using std::cout;
+
 double average(const vector<double>& v) {
     return accumulate(v.begin(), v.end(), 0.0) / v.size();
 }

@@ -1,0 +1,14 @@
+<noun>          batman
+<noun>          cutting board
+<noun>          bachelor
+<noun-phrase>   <noun>
+<noun-phrase>   <adjective> <noun-phrase>
+<adjective>     jovial
+<adjective>     fearless
+<adjective>     scrumtrulescent
+<verb>          earns
+<verb>          basks
+<location>      in the city
+<location>      out on the town
+<location>      nowhere
+<sentence>      the <noun-phrase> <verb> <location>
