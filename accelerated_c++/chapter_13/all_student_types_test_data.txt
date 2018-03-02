@@ -1,0 +1,5 @@
+U Karl 80 90 80 80 d
+P Hank 90 0 80 80 40 30 d
+P Tina 90 70 80 d
+A Quentin 90 80 d
+G GradMan 80 90 70 89 67 d
