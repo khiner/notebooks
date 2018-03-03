@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <iostream>
 #include <iterator>
+#include <string> // for conversion convenience
 
 template <> Vec<char>* clone(const Vec<char>* vp) {
     return new Vec<char>(*vp);
@@ -28,6 +29,9 @@ public:
     Str(): data(new Vec<char>) { }
     Str(const char* cp): data(new Vec<char>) {
         std::copy(cp, cp + std::strlen(cp), std::back_inserter(*data));
+    }
+    Str(const std::string s): data(new Vec<char>) {
+        std::copy(s.begin(), s.end(), std::back_inserter(*data));
     }
     Str(size_type n, char c): data(new Vec<char>(n, c)) { }
     template <class In> Str(In i, In j): data(new Vec<char>) {
