@@ -103,7 +103,7 @@ public:
     }
 
     Str substr(int i, int j) const {
-        Str sub(begin() + i, begin() + j);
+        Str sub(begin() + i, begin() + i + j);
         return sub;
     }
 
