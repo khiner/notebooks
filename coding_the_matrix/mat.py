@@ -115,7 +115,7 @@ def transpose(M):
     >>> M.transpose() == Mt
     True
     """
-    return Mat((M.D[1], M.D[0]), {(k[1], k[0]): v for k, v in M.f.items()})
+    return Mat((M.D[1], M.D[0]), {(k[1], k[0]): M.f[k] for k in M.f.keys()})
 
 def vector_matrix_mul(v, M):
     """
@@ -142,7 +142,13 @@ def vector_matrix_mul(v, M):
     True
     """
     assert M.D[0] == v.D
-    return Vec(M.D[1], {col_label: M.col(col_label) * v for col_label in M.D[1]})
+
+    ret_vec = Vec(M.D[1], {i: 0 for i in M.D[1]})
+    for k in M.f.keys():
+        ret_vec.f[k[1]] += v[k[0]] * M[k]
+    return ret_vec
+
+#    return Vec(M.D[1], {col_label: M.col(col_label) * v for col_label in M.D[1]})
 
 def matrix_vector_mul(M, v):
     """
@@ -169,7 +175,10 @@ def matrix_vector_mul(M, v):
     True
     """
     assert M.D[1] == v.D
-    return Vec(M.D[0], {row_label: M.row(row_label) * v for row_label in M.D[0]})
+    ret_vec = Vec(M.D[0], {i: 0 for i in M.D[0]})
+    for k in M.f.keys():
+        ret_vec.f[k[0]] += v[k[1]] * M[k]
+    return ret_vec
 
 def matrix_matrix_mul(A, B):
     """
@@ -198,8 +207,19 @@ def matrix_matrix_mul(A, B):
     True
     """
     assert A.D[1] == B.D[0]
-    return Mat((A.D[0], B.D[1]), {(a_label, b_label): sum([A.f[(a_label, label)] * B.f[(label, b_label)] for label in B.D[0] if (a_label, label) in A.f and (label, b_label) in B.f]) for a_label in A.D[0] for b_label in B.D[1]})
 
+    AB = Mat((A.D[0],B.D[1]), {})
+    for c in B.D[1]:
+        for k in A.f.keys():
+            AB[k[0],c] += A[k[0],k[1]] * B[k[1],c]
+    return AB
+
+################################################################################
+
+class Mat:
+    def __init__(self, labels, function):
+        self.D = labels
+        self.f = function
 ################################################################################
 
 class Mat:
