@@ -65,7 +65,7 @@ def render_notes(notes):
 
     # interpret list of list of notes as a polyphonic mix of note lanes
     notess = [inner_notes if isinstance(inner_notes, Notes) else Notes(inner_notes) for inner_notes in notes]
-    mixed = np.ndarray(max([notes.data.size for notes in notess]))
+    mixed = np.zeros(max([notes.data.size for notes in notess]))
 
     for notes in notess:
         mixed += np.pad(notes.data, (0, mixed.size - notes.data.size), 'constant', constant_values=0)
