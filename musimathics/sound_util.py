@@ -46,18 +46,25 @@ class Notes:
             self.data = np.zeros(np.sum([note.duration_samples for note in self.notes]) + self.notes[-1].release_samples)
             self.mix()
 
-
     def mix(self):
         data_index = 0
         for note in self.notes:
             self.data[data_index:(data_index + note.duration_samples + note.release_samples)] += note.get_data()
             data_index += note.duration_samples # release tails can overlap
 
+# `notes` can be any of:
+#  - a note-like object (a `Note` or tuple representing note arguments)
+#  - an list-like container of note-like objects
+#  - a list-like container of list-like containers of note-like objects
+#    (in this case, each list is mixed polyphonically)
 def render_notes(notes):
-    return Audio((notes if isinstance(notes, Notes) else Notes(notes)).data, rate=SAMPLE_RATE)
+    if isinstance(notes, Note) or isinstance(notes, tuple):
+        notes = [[notes]]
+    elif (isinstance(notes, list) or isinstance(notes, np.ndarray)) and (isinstance(notes[0], Notes) or isinstance(notes[0], tuple)):
+        notes = [notes]
 
-def render_overlapping_notes(notess):
-    notess = [notes if isinstance(notes, Notes) else Notes(notes) for notes in notess]
+    # interpret list of list of notes as a polyphonic mix of note lanes
+    notess = [inner_notes if isinstance(inner_notes, Notes) else Notes(inner_notes) for inner_notes in notes]
     mixed = np.ndarray(max([notes.data.size for notes in notess]))
 
     for notes in notess:
