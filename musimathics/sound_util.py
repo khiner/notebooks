@@ -9,7 +9,7 @@ TIME_RANGE = np.linspace(0, MAX_NOTE_DURATION_SECONDS, SAMPLE_RATE * MAX_NOTE_DU
 
 class Note:
     # freq of 0 is interpreted as rest
-    def __init__(self, frequency=880, duration_seconds=0.5, attack_seconds=0.1, decay_seconds=0.1, sustain_level=0.7, release_seconds=0.2):
+    def __init__(self, frequency=880, duration_seconds=0.5, attack_seconds=0.1, decay_seconds=0.1, sustain_level=0.7, release_seconds=0.01):
         self.frequency = frequency
         self.duration_samples = int(duration_seconds * SAMPLE_RATE)
         if attack_seconds + decay_seconds >= duration_seconds:
@@ -60,7 +60,7 @@ class Notes:
 def render_notes(notes):
     if isinstance(notes, Note) or isinstance(notes, tuple):
         notes = [[notes]]
-    elif (isinstance(notes, list) or isinstance(notes, np.ndarray)) and (isinstance(notes[0], Notes) or isinstance(notes[0], tuple)):
+    elif (isinstance(notes, list) or isinstance(notes, np.ndarray)) and (isinstance(notes[0], Note) or isinstance(notes[0], tuple)):
         notes = [notes]
 
     # interpret list of list of notes as a polyphonic mix of note lanes
