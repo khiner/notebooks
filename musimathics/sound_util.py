@@ -69,4 +69,5 @@ def render_notes(notes):
 
     for notes in notess:
         mixed += np.pad(notes.data, (0, mixed.size - notes.data.size), 'constant', constant_values=0)
+    mixed /= mixed.max()
     return Audio(mixed, rate=SAMPLE_RATE)
