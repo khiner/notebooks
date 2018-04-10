@@ -10,17 +10,21 @@ class NoteSequence:
     def __init__(self, notes):
         self.notes = [note if isinstance(note, Note) else Note(*note) for note in notes]
         if notes and len(notes) > 0:
-            self.data = np.zeros(np.sum([note.duration_samples for note in self.notes]) + self.notes[-1].adsr.release_samples)
+            zeros_mono = np.zeros(np.sum([note.duration_samples for note in self.notes]) + self.notes[-1].adsr.release_samples)
+            self.data = np.vstack([zeros_mono, zeros_mono])
             self.mix()
 
     def mix(self):
         data_index = 0
         for note in self.notes:
-            self.data[data_index:(data_index + note.duration_samples + note.adsr.release_samples)] += note.get_data()
+            sample_range = data_index, (data_index + note.duration_samples + note.adsr.release_samples)
+            data_mono = note.get_data()
+            self.data[0][sample_range[0]:sample_range[1]] += data_mono * (1 - note.pan)
+            self.data[1][sample_range[0]:sample_range[1]] += data_mono * note.pan
             data_index += note.duration_samples # release tails can overlap
 
     def num_samples(self):
-        return self.data.size
+        return self.data.shape[1]
 
 def is_note_like(item):
     return isinstance(item, Note) or isinstance(item, tuple)
@@ -46,11 +50,12 @@ def render_notes(notes):
             raise ValueError('Invalid argument given to `render_notes`.')
 
     note_sequences = [inner_notes if isinstance(inner_notes, NoteSequence) else NoteSequence(inner_notes) for inner_notes in notes]
-    mixed = np.zeros(max([note_sequence.num_samples() for note_sequence in note_sequences]))
-
+    zeros_mono = np.zeros(max([note_sequence.num_samples() for note_sequence in note_sequences]))
+    mixed = np.vstack([zeros_mono, zeros_mono])
     for notes in note_sequences:
-        mixed += np.pad(notes.data, (0, mixed.size - notes.num_samples()), 'constant', constant_values=0)
-    mixed /= mixed.max()
+        mixed += np.pad(notes.data, (0, mixed.shape[1] - notes.num_samples()), 'constant', constant_values=0)
+    if mixed.max() > 1:
+        mixed /= mixed.max()
     return mixed
 
 def render_notes_ipython(notes):
