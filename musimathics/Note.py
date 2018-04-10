@@ -23,15 +23,15 @@ class Note:
 
     def set_adsr(self, adsr):
         self.adsr = adsr
-        self.__update_data()
+        self.__update_samples()
 
-    def get_data(self):
-        return self.data
+    def get_samples(self):
+        return self.samples
 
-    def __update_data(self):
+    def __update_samples(self):
         if self.frequency == 0:
-            self.data = np.zeros(self.duration_samples + self.adsr.release_samples)
+            self.samples = np.zeros(self.duration_samples + self.adsr.release_samples)
         else:
-            self.data = np.sin(2*np.pi*self.frequency*TIME_RANGE[:(self.duration_samples + self.adsr.release_samples)])
-            self.adsr.apply(self.data)
-            self.data *= self.level
+            self.samples = np.sin(2*np.pi*self.frequency*TIME_RANGE[:(self.duration_samples + self.adsr.release_samples)])
+            self.adsr.apply(self.samples)
+            self.samples *= self.level
