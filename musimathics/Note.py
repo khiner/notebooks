@@ -1,12 +1,8 @@
 import numpy as np
 
-from constants import SAMPLES_PER_SECOND
+from conversion import SAMPLES_PER_SECOND
+from generators import generate_sine
 from ADSR import ADSR
-
-MAX_NOTE_DURATION_SECONDS = 20
-
-# share this 0:MAX_N range
-TIME_RANGE = np.linspace(0, MAX_NOTE_DURATION_SECONDS, SAMPLES_PER_SECOND * MAX_NOTE_DURATION_SECONDS)
 
 class Note:
     # freq of 0 is interpreted as rest
@@ -32,6 +28,6 @@ class Note:
         if self.frequency == 0:
             self.samples = np.zeros(self.duration_samples + self.adsr.release_samples)
         else:
-            self.samples = np.sin(2*np.pi*self.frequency*TIME_RANGE[:(self.duration_samples + self.adsr.release_samples)])
+            self.samples = generate_sine(self.frequency, self.duration_samples + self.adsr.release_samples)
             self.adsr.apply(self.samples)
             self.samples *= self.level

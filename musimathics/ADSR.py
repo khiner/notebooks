@@ -1,6 +1,6 @@
 import numpy as np
 
-from constants import SAMPLES_PER_SECOND
+from conversion import SAMPLES_PER_SECOND
 
 class ADSR:
     # freq of 0 is interpreted as rest

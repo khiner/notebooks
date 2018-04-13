@@ -1,7 +1,7 @@
 import numpy as np
 import IPython
 
-from constants import SAMPLES_PER_SECOND
+from conversion import SAMPLES_PER_SECOND
 from Note import Note
 
 Audio = IPython.display.Audio
@@ -58,5 +58,8 @@ def render_notes(notes):
         mixed /= mixed.max()
     return mixed
 
+def render_samples_ipython(samples):
+    return Audio(samples, rate=SAMPLES_PER_SECOND)
+
 def render_notes_ipython(notes):
-    return Audio(render_notes(notes), rate=SAMPLES_PER_SECOND)
+    return render_samples_ipython(render_notes(notes))
