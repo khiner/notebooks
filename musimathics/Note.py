@@ -3,11 +3,12 @@ import numpy as np
 from conversion import SAMPLES_PER_SECOND
 from generators import generate_sine
 from ADSR import ADSR
+from pitches import FREQUENCY_FOR_NOTE_LABEL
 
 class Note:
     # freq of 0 is interpreted as rest
     def __init__(self, frequency=880, duration_seconds=0.5, level=0.8, pan=0.5, attack_seconds=0.1, decay_seconds=0.1, sustain_level=0.8, release_seconds=0.01):
-        self.frequency = frequency
+        self.frequency = FREQUENCY_FOR_NOTE_LABEL[frequency] if frequency in FREQUENCY_FOR_NOTE_LABEL else frequency
         self.level = level
         self.pan = pan
         self.duration_samples = int(duration_seconds * SAMPLES_PER_SECOND)
