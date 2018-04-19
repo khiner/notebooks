@@ -10,7 +10,7 @@ Audio = IPython.display.Audio
 class NoteSequence:
     def __init__(self, notes):
         self.notes = [note if isinstance(note, Note) else (Note(note) if note in FREQUENCY_FOR_NOTE_LABEL else Note(*note)) for note in notes]
-        if notes and len(notes) > 0:
+        if len(notes) > 0:
             zeros_mono = np.zeros(np.sum([note.duration_samples for note in self.notes]) + self.notes[-1].adsr.release_samples)
             self.samples = np.vstack([zeros_mono, zeros_mono])
             self.mix()
@@ -60,8 +60,8 @@ def render_notes(notes):
         mixed /= mixed.max()
     return mixed
 
-def render_samples_ipython(samples):
-    return Audio(samples, rate=SAMPLES_PER_SECOND)
+def render_samples_ipython(samples, rate=SAMPLES_PER_SECOND):
+    return Audio(samples, rate=rate)
 
 def render_notes_ipython(notes):
     return render_samples_ipython(render_notes(notes))
