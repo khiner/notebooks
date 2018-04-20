@@ -63,5 +63,5 @@ def render_notes(notes):
 def render_samples_ipython(samples, rate=SAMPLES_PER_SECOND):
     return Audio(samples, rate=rate)
 
-def render_notes_ipython(notes):
-    return render_samples_ipython(render_notes(notes))
+def render_notes_ipython(notes, rate=SAMPLES_PER_SECOND):
+    return render_samples_ipython(render_notes(notes), rate=rate)
