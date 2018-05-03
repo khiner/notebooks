@@ -33,3 +33,6 @@ def note_labels_for_pitch_numbers(pitch_numbers):
 
 def pitch_numbers_for_note_labels(note_labels):
     return np.array([PITCH_NUMBER_FOR_NOTE_LABEL[note_label] for note_label in note_labels])
+
+def frequencies_for_note_labels(note_labels):
+    return [FREQUENCY_FOR_NOTE_LABEL[note_label] for note_label in note_labels]
