@@ -43,5 +43,6 @@ def zplane(zeros, poles):
     ax.add_patch(patches.Circle((0,0), radius=1, fill=False, color='black', ls='solid', alpha=0.2))
     plt.axvline(0, color='0.7'); plt.axhline(0, color='0.7')
     
-    plt.plot(poles.real, poles.imag, 'x', markersize=9)
-    plt.plot(zeros.real, zeros.imag,  'o', markersize=9, fillstyle='none')
+    plt.plot(poles.real, poles.imag, 'x', markersize=9, label='poles')
+    plt.plot(zeros.real, zeros.imag,  'o', markersize=9, fillstyle='none', label='zeros')
+    plt.legend()
