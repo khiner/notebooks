@@ -8,7 +8,7 @@ add_library(stk STATIC IMPORTED)
 set_property(TARGET stk PROPERTY IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/stk/src/libstk.a)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/stk/include/)
 
-add_executable(cpp main.cpp utilities.cpp Chapter1LabEffect.h)
+add_executable(cpp main.cpp Chapter1LabEffect.h Rev.h RevLP.h FDNJot4.h ${CMAKE_CURRENT_SOURCE_DIR}/stk/projects/demo/utilities)
 target_link_libraries(cpp stk)
 target_link_libraries(cpp pthread)
 target_link_libraries(cpp "-framework CoreAudio" "-framework CoreFoundation" "-framework CoreMIDI")
