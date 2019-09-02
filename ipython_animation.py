@@ -3,7 +3,7 @@ from matplotlib import animation
 from IPython.display import HTML
 
 MILLIS_PER_SECOND = 1_000
-DEFAULT_FPS = 24
+DEFAULT_FPS = 20
 
 plt.rcParams["animation.writer"] = 'ffmpeg'
 plt.rcParams["animation.embed_limit"] = 100
