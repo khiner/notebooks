@@ -24,10 +24,14 @@ class DelayLine:
         return self.delay_line
 
     def set_all(self, contents):
+        if self.delay_line.size < len(contents):
+            self.delay_line = np.zeros(len(contents))
+        else:
+            self.delay_line[:] = 0
         self.delay_line[:len(contents)] = contents
         self.read_sample = 0
         self.write_sample = 0
-        self.set_delay_samples(self.delay_line.size)
+        self.set_delay_samples(len(contents))
 
     def tick(self, x):
         self.delay_line[self.write_sample] = x
