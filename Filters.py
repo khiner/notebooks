@@ -15,8 +15,9 @@ class IirFilter:
     def tick(self, in_sample):
         self.outputs[0] = 0.0
         self.inputs[0] = in_sample * self.gain
-        for i in range(self.b.size - 1, 0, -1):
-            self.outputs[0] += self.b[i] * self.inputs[i]
+        for i in range(self.inputs.size - 1, 0, -1):
+            if i < self.b.size: # See note in `set_b_coefficients`.
+                self.outputs[0] += self.b[i] * self.inputs[i]
             self.inputs[i] = self.inputs[i-1]
 
         self.outputs[0] += self.b[0] * self.inputs[0]
@@ -26,7 +27,14 @@ class IirFilter:
             self.outputs[i] = self.outputs[i-1]
 
         return self.outputs[0]
-    
+
+    def set_b_coefficients(self, b):
+        # Allow growing and shrinking the b coefficients with minimal noise caused by 0s in history
+        # by keeping inputs as the max length of any b coefficients that have been set.
+        if len(b) > len(self.inputs):
+            self.inputs = np.concatenate([self.inputs, np.zeros(len(b) - len(self.inputs))])
+        self.b = b
+
     # Convenience method wrapping around scipy.signal.freqz
     def freqz(self):
         return freqz(self.b, self.a)
