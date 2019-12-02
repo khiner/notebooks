@@ -33,11 +33,24 @@ class IirFilter:
         # by keeping inputs as the max length of any b coefficients that have been set.
         if len(b) > len(self.inputs):
             self.inputs = np.concatenate([self.inputs, np.zeros(len(b) - len(self.inputs))])
-        self.b = b
+        self.b = np.array(b)
 
     # Convenience method wrapping around scipy.signal.freqz
     def freqz(self):
         return freqz(self.b, self.a)
+
+
+# One-pole lowpass with feedback coefficient of 0.5
+class OnePoleFilter:
+    def __init__(self, g=0.5, p=0.5):
+        self.z_1 = 0 # memory for single pole lowpass filter at bridge
+        self.g = g
+        self.p = p
+
+    def tick(self, in_sample):
+        out_sample = self.g * in_sample + self.p * self.z_1
+        self.z_1 = out_sample
+        return out_sample
 
 
 class TwoZeroFilter:
@@ -58,13 +71,16 @@ class TwoZeroFilter:
         self.b1 = b1
         self.b2 = b2
 
+    def get_coefficients(self):
+        return [self.b0, self.b1, self.b2]
+
     def clear(self):
         self.in1 = 0.0
         self.in2 = 0.0
 
 class PoleZeroFilter():
-    def __init__(self):
-        self.set_coefficients()
+    def __init__(self, b0=1.0, b1=0.0, a1=1.0):
+        self.set_coefficients(b0, b1, a1)
         self.out1 = 0.0
         self.in1 = 0.0
     
