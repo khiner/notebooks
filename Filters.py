@@ -104,3 +104,10 @@ class PoleZeroFilter():
     def clear(self):
         self.in1 = 0.0
         self.out1 = 0.0
+
+class NoOpFilter:
+    def tick(self, in_sample):
+        return in_sample
+    
+    def clear(self):
+        return self

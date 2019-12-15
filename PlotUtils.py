@@ -3,7 +3,8 @@ from matplotlib import pyplot as plt
 
 
 def plot_frequency_response(w, H, fig=None, frequency_plot=None, phase_plot=None, db=True,
-                            lower_db_lim=None, upper_db_lim=None, show_phase_plot=True):
+                            lower_db_lim=None, upper_db_lim=None, show_phase_plot=True,
+                            unwrap_phase=True, phase_delay=False):
     if not fig and not frequency_plot and not phase_plot:
         if show_phase_plot:
             fig, [frequency_plot, phase_plot] = plt.subplots(2, 1, figsize=(10, 6))
@@ -14,7 +15,8 @@ def plot_frequency_response(w, H, fig=None, frequency_plot=None, phase_plot=None
     frequency_plot.grid(True)
     frequency_plot.set_title('Magnitude Response', size=16)
     frequency_plot.set_ylabel('Gain (dB)' if db else 'Gain')
-    frequency_plot.set_xlabel('Frequency (rad/sample)')
+    frequency_label = 'Frequency (radians/sample)'
+    frequency_plot.set_xlabel(frequency_label)
     if db and (lower_db_lim or upper_db_lim):
         frequency_plot.set_ylim(lower_db_lim or -100, upper_db_lim or 1)
     elif not db:
@@ -22,13 +24,20 @@ def plot_frequency_response(w, H, fig=None, frequency_plot=None, phase_plot=None
     frequency_plot.autoscale(enable=True, axis='x', tight=True)
 
     if show_phase_plot:
-        phase_plot.plot(w, np.angle(H), c='g', linewidth=2)
+        phase = np.angle(H)
+        if unwrap_phase:
+            phase = np.unwrap(phase)
+        if phase_delay:
+            phase = phase / max(w, 1e-12) #prevent div by zero
+        phase_plot.plot(w, phase, c='g', linewidth=2)
         phase_plot.grid(True)
         phase_plot.set_title('Phase Response', size=16)
-        phase_plot.set_ylabel('Phase (radians)')
-        phase_plot.set_xlabel('Frequency (rad/sample)')
-        phase_plot.set_yticks(np.pi * np.array([-1, -1/2, 0, 1/2, 1]))
-        phase_plot.set_yticklabels(['$-\\pi$', '$-\\dfrac{\\pi}{2}$', '$0$', '$\\dfrac{\\pi}{2}$', '$\\pi$'])
+        frequency_units = 'samples' if phase_delay else 'radians' 
+        phase_plot.set_ylabel('Phase (%s)' % frequency_units)
+        phase_plot.set_xlabel(frequency_label)
+        if phase.min() >= -np.pi and phase.max() <= np.pi:
+            phase_plot.set_yticks(np.pi * np.array([-1, -1/2, 0, 1/2, 1]))
+            phase_plot.set_yticklabels(['$-\\pi$', '$-\\dfrac{\\pi}{2}$', '$0$', '$\\dfrac{\\pi}{2}$', '$\\pi$'])
         phase_plot.autoscale(enable=True, axis='x', tight=True)
 
     plt.tight_layout()
