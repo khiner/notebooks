@@ -40,6 +40,43 @@ class IirFilter:
         return freqz(self.b, self.a)
 
 
+class OneZeroFilter:
+    def __init__(self, zero=-1.0):
+        self.in1 = self.in2 = self.out1 = 0.0
+        self.set_zero(zero)
+
+    def tick(self, in_sample):
+        self.in1 = in_sample
+        self.out1 = self.b1 * self.in2 + self.b0 * self.in1
+        self.in2 = self.in1
+
+        return self.out1
+
+    def set_zero(self, zero):
+        # Normalize coefficients for unity gain
+        self.b0 = 1.0 / (1.0 + zero) if zero > 0 else 1.0 / (1.0 - zero)
+        self.b1 = -zero * self.b0
+
+    # TODO could be broken
+    def phase_delay(self, frequency, fs=44100):
+        omega_t = 2 * np.pi * frequency / fs
+        real = 0.0
+        imag = 0.0
+        real += self.b0 * np.cos(0)
+        imag -= self.b0 * np.sin(0)
+        real += self.b1 * np.cos(omega_t)
+        imag += self.b1 * np.sin(omega_t)
+        phase = np.arctan2(imag, real)
+        phase = -phase % (2 * np.pi)
+        return phase / omega_t
+
+    def set_coefficients(self, b0, b1):
+        self.b0 = b0
+        self.b1 = b1
+
+    def clear(self):
+        self.in1 = self.in2 = self.out1 = 0.0
+
 # One-pole lowpass with feedback coefficient of 0.5
 class OnePoleFilter:
     def __init__(self, g=0.5, p=0.5):
@@ -52,6 +89,8 @@ class OnePoleFilter:
         self.z_1 = out_sample
         return out_sample
 
+    def clear(self):
+        self.z_1 = 0.0
 
 class TwoZeroFilter:
     def __init__(self):
