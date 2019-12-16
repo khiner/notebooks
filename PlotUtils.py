@@ -1,6 +1,5 @@
 import numpy as np
-from matplotlib import pyplot as plt
-
+np.seterr(divide='ignore', invalid='ignore')
 
 def plot_frequency_response(w, H, fig=None, frequency_plot=None, phase_plot=None, db=True,
                             lower_db_lim=None, upper_db_lim=None, show_phase_plot=True,
@@ -28,7 +27,7 @@ def plot_frequency_response(w, H, fig=None, frequency_plot=None, phase_plot=None
         if unwrap_phase:
             phase = np.unwrap(phase)
         if phase_delay:
-            phase = phase / max(w, 1e-12) #prevent div by zero
+            phase = phase / w
         phase_plot.plot(w, phase, c='g', linewidth=2)
         phase_plot.grid(True)
         phase_plot.set_title('Phase Response', size=16)
@@ -40,6 +39,6 @@ def plot_frequency_response(w, H, fig=None, frequency_plot=None, phase_plot=None
             phase_plot.set_yticklabels(['$-\\pi$', '$-\\dfrac{\\pi}{2}$', '$0$', '$\\dfrac{\\pi}{2}$', '$\\pi$'])
         phase_plot.autoscale(enable=True, axis='x', tight=True)
 
-    plt.tight_layout()
+    fig.tight_layout()
 
     return fig, [frequency_plot, phase_plot]
