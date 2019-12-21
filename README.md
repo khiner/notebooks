@@ -26,12 +26,10 @@ Let me know via a GH issue if you run into problems here and I will fix.
 
 ```bash
 $ git clone git@github.com:khiner/notebooks.git && cd notebooks
+$ git submodule update --init --recursive
 $ xcode-select --install
 $ brew install pipenv
 $ pipenv install
 $ pipenv shell
 (notebooks)$ jupyter-notebook
 ```
-
-I am taking a break from these notebooks as I don't have as much free time these days, but I hope to get back to these in earnest in the future.
-
