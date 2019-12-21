@@ -9,13 +9,15 @@ I hope people get use out of these! Please create issues for any errors you find
 
 ## Viewing the notebooks
 
-To view these notebooks, I recommend using nbviewer. Simply add the GitHub path of the notebook like:
+To view and run these notebooks, I recommend using [colab](https://colab.research.google.com). Simply add the GitHub path of the notebook like:
 
-http://nbviewer.jupyter.org/github/${PATH}
+https://colab.research.google.com/github/${PATH}
 
 For example,
 
-http://nbviewer.jupyter.org/github/khiner/notebooks/blob/master/mathematics_of_the_dft/chapter_7_fourier_theorems_for_the_dft.ipynb
+https://colab.research.google.com/github/khiner/notebooks/blob/master/mathematics_of_the_dft/chapter_7_fourier_theorems_for_the_dft.ipynb
+
+_Note: These notebooks are all best viewed in light mode (not dark mode)_
 
 ## Running the notebooks
 
