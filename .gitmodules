@@ -1,3 +1,6 @@
 [submodule "physical_audio_signal_processing/cpp/stk"]
-	path = physical_audio_signal_processing/cpp/stk
+    path = physical_audio_signal_processing/cpp/stk
 	url = git@github.com:thestk/stk.git
+[submodule "physical_audio_signal_processing/dsptools"]
+    path = physical_audio_signal_processing/dsptools
+    url = git@github.com:yurochka/dsptools.git
