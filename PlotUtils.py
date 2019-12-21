@@ -1,4 +1,5 @@
 import numpy as np
+from matplotlib import pyplot as plt
 np.seterr(divide='ignore', invalid='ignore')
 
 def plot_frequency_response(w, H, fig=None, frequency_plot=None, phase_plot=None, db=True,
@@ -39,6 +40,6 @@ def plot_frequency_response(w, H, fig=None, frequency_plot=None, phase_plot=None
             phase_plot.set_yticklabels(['$-\\pi$', '$-\\dfrac{\\pi}{2}$', '$0$', '$\\dfrac{\\pi}{2}$', '$\\pi$'])
         phase_plot.autoscale(enable=True, axis='x', tight=True)
 
-    fig.tight_layout()
+    plt.tight_layout()
 
     return fig, [frequency_plot, phase_plot]
