@@ -1,5 +1,6 @@
 import numpy as np
-from matplotlib import pyplot as plt
+import matplotlib.pyplot as plt
+from matplotlib import patches
 np.seterr(divide='ignore', invalid='ignore')
 
 def plot_frequency_response(w, H, fig=None, frequency_plot=None, phase_plot=None, db=True,
@@ -43,3 +44,34 @@ def plot_frequency_response(w, H, fig=None, frequency_plot=None, phase_plot=None
     plt.tight_layout()
 
     return fig, [frequency_plot, phase_plot]
+
+
+def zplane(zeros, poles, ax=None, zeros_ax=None, poles_ax=None):
+    """Plot the complex z-plane given zeros and poles."""
+
+    zeros = np.asarray(zeros).astype(complex)
+    poles = np.asarray(poles).astype(complex)
+
+    plt.figure(figsize=(8, 8))
+    if ax is None:
+        ax = plt.subplot(111)
+
+    if zeros_ax is None and poles_ax is None:
+        ax.add_patch(patches.Circle((0,0), radius=1, fill=False, color='black', ls='solid', alpha=0.2))
+        ax.axvline(0, color='0.7'); ax.axhline(0, color='0.7')
+
+    if poles.size > 0:
+        if poles_ax is None:
+            poles_ax, = ax.plot(poles.real, poles.imag,  'x', markersize=9, label='poles')
+        else:
+            poles_ax.set_data(poles.real, poles.imag)
+
+    if zeros.size > 0:
+        if zeros_ax is None:
+            zeros_ax, = ax.plot(zeros.real, zeros.imag, 'o', markersize=9, fillstyle='none', label='zeros')
+        else:
+            zeros_ax.set_data(zeros.real, zeros.imag)
+    ax.legend()
+
+    ax.set_aspect('equal')
+    return zeros_ax, poles_ax
