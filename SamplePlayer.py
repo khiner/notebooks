@@ -1,6 +1,8 @@
 class SamplePlayer:
-    def __init__(self, samples):
+    def __init__(self, samples, normalize=False):
         self.samples = samples
+        if normalize:
+            self.samples = self.samples / self.samples.max()
         self.sample_index = 0
 
     def tick(self):
@@ -22,6 +24,6 @@ import numpy as np
 from scipy.io.wavfile import read as read_wav
 
 class WavPlayer(SamplePlayer):
-    def __init__(self, wav_file_path):
+    def __init__(self, wav_file_path, normalize=False):
         self.fs, samples = read_wav(wav_file_path)
-        super(WavPlayer, self).__init__(samples if np.isscalar(samples[0]) else samples[:,0])
+        super(WavPlayer, self).__init__(samples if np.isscalar(samples[0]) else samples[:,0], normalize)

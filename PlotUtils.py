@@ -46,13 +46,15 @@ def plot_frequency_response(w, H, fig=None, frequency_plot=None, phase_plot=None
     return fig, [frequency_plot, phase_plot]
 
 
-def zplane(zeros, poles, ax=None, zeros_ax=None, poles_ax=None):
+def zplane(zeros, poles, fig=None, ax=None, zeros_ax=None, poles_ax=None):
     """Plot the complex z-plane given zeros and poles."""
 
     zeros = np.asarray(zeros).astype(complex)
     poles = np.asarray(poles).astype(complex)
 
-    plt.figure(figsize=(8, 8))
+    if fig is None:
+        plt.figure(figsize=(8, 8))
+
     if ax is None:
         ax = plt.subplot(111)
 
