@@ -21,13 +21,18 @@ L"""
 struct V2
 	value::SVector{2,Number} # Arrow extends to this point (minus `origin`).
 	origin::SVector{2,Number} # Arrow starts at this point.
+	arrow::Symbol # Arrow type: (:arrow, :closed, :open, :none)
 	label::Union{String,Nothing} # Label shown in the legent.
 	annotation::Union{String,Nothing} # Label shown in the chart, half way along.
-	width::Float64 # Line width.
-	linestyle::Symbol # Line style. :auto, :solid, :dash, :dot, :dashdot, :dashdotdot
+	annotationpos::Symbol # Annotation position: (:middle, :end)
+	annotationoffset::SVector{2,Float64}
+	plottype::Symbol # Draw as either a line or point (defaults to :line).
+	linewidth::Float64 # Line width.
+	linestyle::Symbol # Line style: (:auto, :solid, :dash, :dot, :dashdot, :dashdotdot)
+	color::Symbol # Line color.
 
-    function V2(value; o=[0.,0.], l=nothing, a=nothing, w=1., ls=:solid)
-		new(value, o, l, a, w, ls)
+    function V2(value; o=[0.,0.], arrow=:arrow, l=nothing, a=nothing, ap=:middle, ao=[0.15,0.15], pt=:line, lw=1., ls=:solid, c=:auto)
+		new(value, o, arrow, l, a, ap, ao, pt, lw, ls, c)
 	end
 end
 
@@ -36,16 +41,25 @@ end
 Draw an arrow for each row vector in `vectors`.
 Arrows extend from each vector's `origin` to its `value`, and are optionally labeled with it's `label`.
 """
-function draw(vectors::Vararg{V2})
+function draw(vectors::Vararg{V2}; kw...)
 	plt = plot(aspect_ratio=:equal)
 	for v in vectors
-		plot!(
-			[v.origin.x, v.origin.x + v.value.x],
-			[v.origin.y, v.origin.y + v.value.y],
-			linewidth=v.width, linestyle=v.linestyle, arrow=:arrow, label=v.label
-		)
+		o = v.origin
+		val = o + v.value
+		if v.plottype == :line
+			plot!(
+				[o.x, val.x], [o.y, val.y];
+				linewidth=v.linewidth, linestyle=v.linestyle, arrow=v.arrow, label=v.label, c=v.color, kw...
+			)
+		else
+			scatter!([val.x], [val.y]; label=v.label)
+		end
 		if v.annotation != nothing
-			annotate!((v.origin + v.value / 2 .+ 0.1)..., v.annotation, :left)
+			ap = v.annotationpos
+			ao = v.annotationoffset
+			scale = ap == :middle ? 0.5 : 1
+			anchor = ap == :middle ? :left : :center
+			annotate!((o + (v.value * scale .+ ao))..., v.annotation, anchor)
 		end
 	end
 
@@ -69,7 +83,8 @@ b) $\v{1\\0\\0}$ and $\v{0\\2\\3}$
 
 $c\v{1\\0\\0} + d\v{0\\2\\3} = \v{c\\2d\\3d}$
 
-Keeping $c = 0$ and varying $d$ creates a line through the origin and $\v{0\\2\\3}$. Varying $c$ extends the line across the $x$-dimension to form a plane with slope $\frac{2}{3}$ with respect to the $x$-axis.
+Keeping $c = 0$ and varying $d$ creates a line through the origin and $\v{0\\2\\3}$.
+Varying $c$ extends the line across the $x$-dimension to form a plane with slope $\frac{2}{3}$ with respect to the $x$-axis.
 
 c) $\v{2\\0\\0}$ and $\v{0\\2\\2}$ and $\v{2\\2\\3}$
 
@@ -85,10 +100,10 @@ md"""
 let
 	v = [4; 1]; w = [-2; 2]
 	draw(
-		V2(v, w=2, l=L"v"),
-		V2(w, w=2, l=L"w"),
-		V2(v+w, w=4, l=L"v+w"),
-		V2(v-w, w=4, l=L"v-w"),
+		V2(v, lw=2, l=L"v"),
+		V2(w, lw=2, l=L"w"),
+		V2(v+w, lw=4, l=L"v+w"),
+		V2(v-w, lw=4, l=L"v-w"),
 		V2(w, o=v, a=L"+w", ls=:dash),
 		V2(-w, o=v, a=L"-w", ls=:dash),
 	)
@@ -128,10 +143,10 @@ So, $\b{v} = \v{3\\3}$, and $\b{w} = \v{2\\-2}$.
 let
 	v = [3; 3]; w = [2; -2]
 	draw(
-		V2(v, w=2, l=L"v"),
-		V2(w, w=2, l=L"w"),
-		V2(v+w, w=4, l=L"v+w"),
-		V2(v-w, w=4, l=L"v-w"),
+		V2(v, lw=2, l=L"v"),
+		V2(w, lw=2, l=L"w"),
+		V2(v+w, lw=4, a=L"v+w", ao=[0, 0.5]),
+		V2(v-w, lw=4, a=L"v-w"),
 		V2(w, o=v, a=L"+w", ls=:dash),
 		V2(-w, o=v, a=L"-w", ls=:dash),
 	)
@@ -157,9 +172,11 @@ $2\b{u}+2\b{v}+\b{w} = \v{2 \cdot 1+2 \cdot (-3)+2\\2 \cdot 2+2 \cdot 1+(-3)\\2 
 
 How do you know $\b{u}, \b{v}, \b{w}$ lie in a plane?
 
-**These lie in a plane because $\b{w} = c\b{u} + d\b{v}$. Find $c$ and $d$.**
+**These lie in a plane because $\b{w} = c\b{u} + d\b{v}$.
+Find $c$ and $d$.**
 
-We only need a system of two equations to find the two variables $c$ and $d$. So we can use substitution with two of the components:
+We only need a system of two equations to find the two variables $c$ and $d$.
+We can use substitution with two of the components:
 
 $\align{
 \b{w}_1 &= c\b{u}_1 + d\b{v}_1\\
@@ -192,7 +209,8 @@ $\align{
 
 # ╔═╡ b82d0e9b-4615-4107-b719-ff562893f893
 md"""
-**6.** Every combination of $\b{v} = (1,-2,1)$ and $\b{w} = (0,1,-1)$ has components that add to ____. Find $c$ and $d$ so that $c\b{v} + d\b{w} = (3,3,-6)$.
+**6.** Every combination of $\b{v} = (1,-2,1)$ and $\b{w} = (0,1,-1)$ has components that add to ____.
+Find $c$ and $d$ so that $c\b{v} + d\b{w} = (3,3,-6)$.
 
 $c$ must be equal to $3$, since $\b{w}_1 = 0$. Using the second components to find $d$:
 
@@ -247,7 +265,10 @@ end
 
 # ╔═╡ 0a1a8900-0da3-4c2c-849b-b5ebc6d979e2
 md"""
-**8.** The parallelogram in Figure 1.1 has diagonal $\b{v} + \b{w}.$ What is its other diagonal? What is the sum of the two diagonals? Draw that vector sum.
+**8.** The parallelogram in Figure 1.1 has diagonal $\b{v} + \b{w}.$
+What is its other diagonal?
+What is the sum of the two diagonals?
+Draw that vector sum.
 
 $\b{v} = \v{4\\2}, \b{w} = \v{-1\\2}$
 
@@ -262,8 +283,8 @@ let
 		V2(w, w=2, l=L"w"),
 		V2(v+w, w=3, l=L"v+w"),
 		V2(w, o=v, a=L"w", ls=:dash),
-		V2(v, o=w, a=L"v", ls=:dash),
-		V2(v-w, o=w, a=L"v-w", ls=:dash),
+		V2(v, o=w, a=L"v", ao=[0, 0.25], ls=:dash),
+		V2(v-w, o=w, a=L"v-w", ao=[1, 0.2], ls=:dash),
 		V2(2v, l=L"2v", w=4),
 		V2(v-w, o=v+w, a=L"v-w", ls=:dash),
 	)
@@ -271,7 +292,8 @@ end
 
 # ╔═╡ 50d0dd29-e890-4144-8427-bceedd404642
 md"""
-**9.** If three corners of a parallelogram are $(1,1), (4,2),$ and $(1,3),$ what are all three of the possible fourth corners? Draw two of them.
+**9.** If three corners of a parallelogram are $(1,1), (4,2),$ and $(1,3),$ what are all three of the possible fourth corners?
+Draw two of them.
 
 $\b{c1} = \v{1\\1}, \b{c2} = \v{1\\3}, \b{c3} = \v{4\\2}, \b{c4} = \v{?\\?}$
 
@@ -282,7 +304,7 @@ Let's plot the three given corners:
 three_corners = [1;1;;1;3;;4;2] # each column is a corner
 
 # ╔═╡ 9bbff24a-623a-403d-85df-109bfebd6c3b
-scatter(eachrow(three_corners)..., series_annotations=text.([" c1", " c2", " c3"], 12, :left), label="", xlims=(-3,5), ylims=(-1,5))
+scatter(eachrow(three_corners)..., series_annotations=text.([" c1", " c2", " c3"], 12, :left), label="", xlims=(-3,5), ylims=(-1,5), )
 
 # ╔═╡ c36df7f9-e76a-45d6-aecc-f2c3d2e69ffa
 md"""
@@ -309,13 +331,146 @@ let
 			label="", xlims=(-3,5), ylims=(-1,5)),
 		pgram_corners
 	)
-	plot(plots..., layout = 3)
+	plot(plots..., layout = 3, aspect_ratio=:equal)
 end
 
 # ╔═╡ df1c4083-065b-4bca-a9a0-f70ed6bf4b52
 md"""
-**10.** Which point of the cube is $\b{i} + \b{j}$? Which point is the vector sum of $\b{i} = (1,0,0)$ and $\b{j} = (0,1,0)$ and $\b{k} = (0,0,1)$? Describe all points $(x,y,z)$ in the cube.
+**10.** Which point of the cube is $\b{i} + \b{j}$? Which point is the vector sum of $\b{i} = (1,0,0)$ and $\b{j} = (0,1,0)$ and $\b{k} = (0,0,1)$?
+Describe all points $(x,y,z)$ in the cube.
+
+$\align{
+\mathbb{o} &\equiv (0,0,0)\\
+\b{i} &= (1,0,0)\\
+\b{j} &= (0,1,0)\\
+\b{k} &= (0,0,1)\\
+\b{i} + \b{j} &= (1,1,0)\\
+\b{i} + \b{k} &= (1,0,1)\\
+\b{j} + \b{k} &= (0,1,1)\\
+\b{i} + \b{j} + \b{k} &= (1,1,1)
+}$
+
 """
+
+# ╔═╡ 50b358af-6c15-4a2c-a384-8ef0281b5469
+md"""
+**11.** Four corners of this unit cube are $(0,0,0),(1,0,0),(0,1,0),(0,0,1).$
+What are the other four corners?
+
+(All 8 corners are described above).
+
+Find the coordinates of the center point of the cube.
+
+$\text{center} = 0.5*(\b{i} + \b{j} + \b{k}) = (0.5, 0.5, 0.5).$
+
+The center points of the six faces are:
+
+$\align{
+0.5(\b{i} + \b{j}) &= (0.5, 0.5, 0)\\
+0.5(\b{i} + \b{k}) &= (0.5, 0, 0.5)\\
+0.5(\b{j} + \b{k}) &= (0, 0.5, 0.5)\\
+\b{k} + 0.5(\b{i} + \b{j}) &= (0.5, 0.5, 1)\\
+\b{j} + 0.5(\b{i} + \b{k}) &= (0.5, 1, 0.5)\\
+\b{i} + 0.5(\b{j} + \b{k})  &= (1, 0.5, 0.5)\\
+}$
+
+The cube has how many edges?
+
+The cube has 12 edges (4 corners with 3 unique edges each).
+"""
+
+# ╔═╡ b6f029a0-8e39-4108-916a-5033b2ade7a2
+md"""
+**12.** _Review Question._
+In $xyz$ space, where is the plane of all linear combinations of $i = (1,0,0)$ and $i + j = (1,1,0)$?
+
+This is the plane along the "bottom" of the cube, perpendicular to the $k$-axis, composed of all points with $k = 0$.
+"""
+
+# ╔═╡ 84a67551-9ed1-42be-be5b-cc92acceffe8
+md"""
+**13.**
+
+a) What is the sum $\b{V}$ of the twelve vectors that go from the center of a clock to the hourse 1:00, 2:00, ..., 12:00?
+
+Since each vector has exactly one vector with the same magnitude going in the opposite direction, the sum of all vectors must be equal to the zero-vector $(0, 0)$.
+
+b) If the 2:00 vector is removed, why do the 11 remaining vectors add to 8:00?
+
+Using the same argument as for (a) above, all vectors have an opposite vector exactly cancelling it out.
+If we remove any one of the vectors, the opposite vector will have nothing to cancel it out, while all remaining vectors still cancel.
+Thus, since 8:00 corresponds to the vector opposite 2:00, it will be the only contribution to the sum that is not cancelled out.
+
+c) What are the $x, y$ components of that 2:00 vector $\b{v} = (\cos{\theta},\sin{\theta})$?
+
+Since $\b{v} = (\cos{\theta},\sin{\theta})$ is given, we know that the radius of the clock is $1$ unit.
+2:00 is $\frac{1}{12}$ of the way, counter-clockwise, around the circle starting at 3:00 (where $\theta = 0$).
+Thus, $\theta = \frac{1}{12}(2\pi) = \frac{\pi}{6}$, and we have:
+
+$\b{v} = (\cos{\frac{\pi}{6}},\sin{\frac{\pi}{6}}) = (\frac{\sqrt{3}}{2}, \frac{1}{2}).$
+"""
+
+# ╔═╡ f44b3e22-6f72-41c0-8c26-1db04f32155d
+md"""
+**14.** Suppose the twelve vectors start from 6:00 at the bottom instead of $(0,0)$ at the center. The vector to 12:00 is doubled to $0,2)$. The new twelve vectors add to ____.
+
+We are effectively moving the origin down by $1$.
+This is equivalent to adding $(0, 1)$ to each vector.
+Thus, the resulting sum will be $(0, 12)$.
+
+To verify this result visually & empirically, let's first draw the original clock:
+"""
+
+# ╔═╡ 01533808-dad6-4afc-88ae-03bd5402009f
+begin
+	# Define an array Θ of angles indexable by the o'clock position,
+	# s.t. Θ[3] == 0
+	Θ_clock = circshift(0:11 |> reverse, 3) * pi/6
+	@assert(Θ_clock[3] == 0)
+	V_clock = [cos.(Θ_clock) sin.(Θ_clock)] # Each row of this matrix is an hour position on the unit clock.
+end
+
+# ╔═╡ 62cea919-4d7a-4432-b823-dfe16284fcf6
+let
+	Vectors_clock = map(iv -> V2(last(iv); a="$(first(iv))", ap=:end, ao=last(iv) * 0.15, l="", c=:black), eachrow(V_clock) |> enumerate)
+	draw(Vectors_clock...; xlims=(-1.5, 1.5), ylims=(-1.5, 1.5))
+end
+
+# ╔═╡ 8dafef43-fc69-46c2-8ec0-48c7b839dfcf
+md"Reproduce our $(0, 0)$ sum:"
+
+# ╔═╡ bdc113bd-9e7f-44e9-b140-61a8f1727b0b
+sum(V_clock; dims=1)
+
+# ╔═╡ 34ddf40b-aa55-4441-913e-18956c2b1e93
+md"Now, with the origin at 6:00..."
+
+# ╔═╡ 46a4d33b-2ca1-476b-85bf-9f6c4c3a62b7
+let
+	V_clock_6_origin = V_clock .+ [0 1]
+	Vectors_clock = map(iv -> V2(last(iv); a="$(first(iv) == 6 ? "" : first(iv))", ap=:end, ao=last(iv) * 0.1, l="", c=:black, o=[0,-1]), eachrow(V_clock_6_origin) |> enumerate)
+	draw(Vectors_clock...; xlims=(-1.5, 1.5), ylims=(-1.5, 1.5))
+end
+
+# ╔═╡ 163f44c4-546f-4a29-a028-52d9b4f6be81
+sum(V_clock .+ [0 1]; dims=1)
+
+# ╔═╡ 4bd91592-20a9-4b34-a477-f5143a5e440d
+md"""
+Probs. **15-19** deal with the following $\b{v}$ and $\b{w}$: (The book does not define the vectors precisely, as the lessons work with arbitrary vectors.)
+"""
+
+# ╔═╡ 9ec03fac-1a30-4093-b480-e5b32e35ab5e
+let
+	w = [1, 6]; v = [6, 1]
+	draw(
+		V2(w, a=L"w", ap=:end, ao=w*0.02),
+		V2(v, a=L"v", ap=:end, ao=v*0.02),
+		V2(v - w; o=w, arrow=:none, ls=:dash),
+		V2(0.5(v + w); a=L"u = \frac{1}{5}(v + w)", ap=:end, ao=[1.3, 0], pt=:point)
+		; xlims=(0, 7)
+	)
+end
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -336,7 +491,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.8.5"
 manifest_format = "2.0"
-project_hash = "9b91ffee99c6d7741eb19032f03d8d1ac037f9b1"
+project_hash = "5d461c8f920942c5e3194ce53cf915a055d287bc"
 
 [[deps.ArgTools]]
 uuid = "0dad84c5-d112-42e6-8d28-ef12dabb789f"
@@ -1291,5 +1446,18 @@ version = "1.4.1+0"
 # ╠═c36df7f9-e76a-45d6-aecc-f2c3d2e69ffa
 # ╠═38f6fa60-4ce3-4107-9777-ab93d8a104f0
 # ╠═df1c4083-065b-4bca-a9a0-f70ed6bf4b52
+# ╠═50b358af-6c15-4a2c-a384-8ef0281b5469
+# ╠═b6f029a0-8e39-4108-916a-5033b2ade7a2
+# ╠═84a67551-9ed1-42be-be5b-cc92acceffe8
+# ╠═f44b3e22-6f72-41c0-8c26-1db04f32155d
+# ╠═01533808-dad6-4afc-88ae-03bd5402009f
+# ╠═62cea919-4d7a-4432-b823-dfe16284fcf6
+# ╠═8dafef43-fc69-46c2-8ec0-48c7b839dfcf
+# ╠═bdc113bd-9e7f-44e9-b140-61a8f1727b0b
+# ╠═34ddf40b-aa55-4441-913e-18956c2b1e93
+# ╠═46a4d33b-2ca1-476b-85bf-9f6c4c3a62b7
+# ╠═163f44c4-546f-4a29-a028-52d9b4f6be81
+# ╠═4bd91592-20a9-4b34-a477-f5143a5e440d
+# ╠═9ec03fac-1a30-4093-b480-e5b32e35ab5e
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
