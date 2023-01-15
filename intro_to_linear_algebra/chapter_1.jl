@@ -9,6 +9,7 @@ using Plots, LaTeXStrings, StaticArrays
 
 # ╔═╡ 666d600c-ca60-4ed9-96fc-515960159cc2
 L"""
+\newcommand{\s}{\enspace}
 \newcommand{\R}{\mathbb{R}}
 \newcommand{\b}[1]{\boldsymbol{#1}}
 \newcommand{\v}[1]{\begin{bmatrix}#1\end{bmatrix}}
@@ -60,7 +61,7 @@ md"""
 
 a) $\v{1\\2\\3}$ and $\v{3\\6\\9}$
 
-Since $\v{3\\6\\9} = 3\v{1\\2\\3}$, the linear combination of both vectors is just $c\v{1\\2\\3} c \in{\R}$.
+Since $\v{3\\6\\9} = 3\v{1\\2\\3}$, the linear combination of both vectors is just $\s c\v{1\\2\\3}, c \in{\R}$.
 
 This is the line crossing through the origin, $\begin{bmatrix}0\\0\\0\end{bmatrix}$, and $\begin{bmatrix}1\\2\\3\end{bmatrix}$.
 
@@ -106,7 +107,7 @@ $\align{
 \b{v}_2 - \b{w}_2 &= 5\\
 }$
 
-Eliminating $\b{w}$ variables and solving:
+Substitute $\b{w}$ variables and solve:
 
 $\align{
 \b{w}_1 &= \b{v}_1 - 1\\
@@ -135,6 +136,186 @@ let
 		V2(-w, o=v, a=L"-w", ls=:dash),
 	)
 end
+
+# ╔═╡ b55d0ef6-f90d-475a-8097-a71e15064fb7
+md"""
+**4.** From $\b{v} = \v{2\\1}$ and $\b{w} = \v{1\\2}$, find the components of $3\b{v} + \b{w}$ and $c\b{v} + d\b{w}$.
+
+$3\b{v} + \b{w} = \v{3 \cdot 2 + 1\\3 \cdot 1 + 2} = \v{7\\5}$
+$c\b{v} + d\b{w} = \v{2c + d\\c + 2d}$
+"""
+
+# ╔═╡ 9640b2b8-0d72-458d-9511-b6b419ea80e5
+md"""
+**5.** Compute $\b{u}+\b{v}+\b{w}$ and $2\b{u}+2\b{v}+\b{w}$.
+
+$\b{u} = \v{1\\2\\3}, \b{v} = \v{-3\\1\\-2}, \b{w} = \v{2\\-3\\-1}.$
+
+$\b{u}+\b{v}+\b{w} = \v{1+(-3)+2\\2+1+(-3)\\3+(-2)+(-1)} = \v{0\\0\\0}$
+
+$2\b{u}+2\b{v}+\b{w} = \v{2 \cdot 1+2 \cdot (-3)+2\\2 \cdot 2+2 \cdot 1+(-3)\\2 \cdot 3+2 \cdot (-2)+(-1)} = \v{-2\\3\\1}$
+
+How do you know $\b{u}, \b{v}, \b{w}$ lie in a plane?
+
+**These lie in a plane because $\b{w} = c\b{u} + d\b{v}$. Find $c$ and $d$.**
+
+We only need a system of two equations to find the two variables $c$ and $d$. So we can use substitution with two of the components:
+
+$\align{
+\b{w}_1 &= c\b{u}_1 + d\b{v}_1\\
+\b{w}_2 &= c\b{u}_2 + d\b{v}_2\\
+\implies\\
+2 &= c - 3d\\
+-3 &= 2c + d\\
+}$
+
+Substituting $c = 3d + 2$:
+
+$\align{
+-3 &= 2c + d\\
+-3 &= 2(3d + 2) + d\\
+-7 &= 7d\\
+d &= -1, \text{and}\\
+c &= 3d + 2 = -3 + 2 = -1
+}$
+
+Verifying:
+
+$\align{
+\b{w} &= c\b{u} + d\b{v}\\
+&= (-1)\b{u} + (-1)d\b{v}\\
+
+\v{2\\-3\\-1} &= -\v{1\\2\\3} - \v{-3\\1\\-2}\\
+&= \v{-1+3\\-2-1\\-3+2}
+}$
+"""
+
+# ╔═╡ b82d0e9b-4615-4107-b719-ff562893f893
+md"""
+**6.** Every combination of $\b{v} = (1,-2,1)$ and $\b{w} = (0,1,-1)$ has components that add to ____. Find $c$ and $d$ so that $c\b{v} + d\b{w} = (3,3,-6)$.
+
+$c$ must be equal to $3$, since $\b{w}_1 = 0$. Using the second components to find $d$:
+
+$\align{
+c\b{v}_2 + d\b{w}_2 &= 3\\
+3 \cdot (-2) + d \cdot 1 &= 3\\
+-6 + d &= 3\\
+d &= 9
+}$
+
+Verifying with $c = 3$ and $d = 9$:
+
+$\align{
+c\b{v} + d\b{w} &= \v{3\\3\\-6}\\
+3\v{1\\-2\\1} + 9\v{0\\1\\-1} &= \v{3\\3\\-6}\\
+\v{3+0\\-6+9\\3-9} &= \v{3\\3\\-6}
+}$
+
+**Why is $(3,3,6)$ impossible?**
+
+There can be no $c$ and $d$ such that
+
+$c\v{1\\-2\\1} + d\v{0\\1\\-1} = \v{3\\3\\6},$
+
+since $c$ must be equal to $3$, and there is no $d$ that satisfies both the second and third components:
+
+$\align{
+3 \cdot (-2) + d &= 3 \implies d = 9\\
+3 \cdot 1 - d &= 6 \implies d = -3
+}$
+"""
+
+# ╔═╡ 1ccb54d8-0219-48d9-a282-303f67e646eb
+md"""
+**7.** In the $xy$ plane, mark all nine of these linear combinations:
+
+$c\v{2\\1} + d\v{0\\1} \s \text{with} \s c = 0,1,2 \s \text{and} \s d = 0,1,2.$
+"""
+
+# ╔═╡ 70fdd975-62bc-4825-a872-d32b2f924362
+let
+	plt = plot()
+	for c in (0,1,2)
+		for d in (0,1,2)
+			V = c * [2;1] + d * [0;1]
+			scatter!([V[1]], [V[2]], label="", c=1, xlims=(-1, 6))
+			annotate!([(V..., text(L"\enspace c=%$c, d=%$d", 12, :left))])
+		end
+	end
+	plt
+end
+
+# ╔═╡ 0a1a8900-0da3-4c2c-849b-b5ebc6d979e2
+md"""
+**8.** The parallelogram in Figure 1.1 has diagonal $\b{v} + \b{w}.$ What is its other diagonal? What is the sum of the two diagonals? Draw that vector sum.
+
+$\b{v} = \v{4\\2}, \b{w} = \v{-1\\2}$
+
+Reproducing Fig. 1.1, and adding the other diagonal, $\b{v} - \b{w} = \v{5\\0},$ and the sum of the two diagonals, $\b{v} + \b{w} + (\b{v} - \b{w}) = 2\b{v}$:
+"""
+
+# ╔═╡ d804f088-e382-4e5d-ae5e-d256142e668e
+let
+	v = [4; 2]; w = [-1; 2]
+	draw(
+		V2(v, w=2, l=L"v"),
+		V2(w, w=2, l=L"w"),
+		V2(v+w, w=3, l=L"v+w"),
+		V2(w, o=v, a=L"w", ls=:dash),
+		V2(v, o=w, a=L"v", ls=:dash),
+		V2(v-w, o=w, a=L"v-w", ls=:dash),
+		V2(2v, l=L"2v", w=4),
+		V2(v-w, o=v+w, a=L"v-w", ls=:dash),
+	)
+end
+
+# ╔═╡ 50d0dd29-e890-4144-8427-bceedd404642
+md"""
+**9.** If three corners of a parallelogram are $(1,1), (4,2),$ and $(1,3),$ what are all three of the possible fourth corners? Draw two of them.
+
+$\b{c1} = \v{1\\1}, \b{c2} = \v{1\\3}, \b{c3} = \v{4\\2}, \b{c4} = \v{?\\?}$
+
+Let's plot the three given corners:
+"""
+
+# ╔═╡ 857ca64f-34cd-461f-8148-b56816232929
+three_corners = [1;1;;1;3;;4;2] # each column is a corner
+
+# ╔═╡ 9bbff24a-623a-403d-85df-109bfebd6c3b
+scatter(eachrow(three_corners)..., series_annotations=text.([" c1", " c2", " c3"], 12, :left), label="", xlims=(-3,5), ylims=(-1,5))
+
+# ╔═╡ c36df7f9-e76a-45d6-aecc-f2c3d2e69ffa
+md"""
+Each pair of opposite sides of a parallelogram must have the same length.
+
+We can visually see that the possible fourth corner $\b{c4}$ can be any of:
+
+$\b{c4} \in \{\b{c3} + (\b{c2} - \b{c1}), \b{c3} - (\b{c2} - \b{c1}), \b{c2} - (\b{c3} - \b{c1})\}$
+
+Let's see these solutions plotted out along with the other corners:
+"""
+
+# ╔═╡ 38f6fa60-4ce3-4107-9777-ab93d8a104f0
+let
+	c1, c2, c3 = eachcol(three_corners)
+	possible_fourth_corners = (c3 + (c2 - c1), c3 - (c2 - c1), c2 - (c3 - c1))
+	pgram_corners = map(
+		fourth_corner -> hcat(three_corners, fourth_corner),
+		possible_fourth_corners
+	)
+	plots = map(
+		corners -> scatter(eachrow(corners)...,
+			series_annotations=text.([" c1", " c2", " c3", " c4"], 11, :left),
+			label="", xlims=(-3,5), ylims=(-1,5)),
+		pgram_corners
+	)
+	plot(plots..., layout = 3)
+end
+
+# ╔═╡ df1c4083-065b-4bca-a9a0-f70ed6bf4b52
+md"""
+**10.** Which point of the cube is $\b{i} + \b{j}$? Which point is the vector sum of $\b{i} = (1,0,0)$ and $\b{j} = (0,1,0)$ and $\b{k} = (0,0,1)$? Describe all points $(x,y,z)$ in the cube.
+"""
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -1097,5 +1278,18 @@ version = "1.4.1+0"
 # ╠═b78fb4bf-c0f2-45b3-88bf-f3eb22094823
 # ╠═f1d4ce39-9e80-4042-b6a7-715260da57dc
 # ╠═696e90b5-a8c2-4803-9e74-2d29fef911df
+# ╠═b55d0ef6-f90d-475a-8097-a71e15064fb7
+# ╠═9640b2b8-0d72-458d-9511-b6b419ea80e5
+# ╠═b82d0e9b-4615-4107-b719-ff562893f893
+# ╠═1ccb54d8-0219-48d9-a282-303f67e646eb
+# ╠═70fdd975-62bc-4825-a872-d32b2f924362
+# ╠═0a1a8900-0da3-4c2c-849b-b5ebc6d979e2
+# ╠═d804f088-e382-4e5d-ae5e-d256142e668e
+# ╠═50d0dd29-e890-4144-8427-bceedd404642
+# ╠═857ca64f-34cd-461f-8148-b56816232929
+# ╠═9bbff24a-623a-403d-85df-109bfebd6c3b
+# ╠═c36df7f9-e76a-45d6-aecc-f2c3d2e69ffa
+# ╠═38f6fa60-4ce3-4107-9777-ab93d8a104f0
+# ╠═df1c4083-065b-4bca-a9a0-f70ed6bf4b52
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
