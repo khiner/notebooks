@@ -4,10 +4,61 @@
 using Markdown
 using InteractiveUtils
 
-# ╔═╡ 926db787-d1f7-475d-9656-2d06e11b85f8
-using Plots, LaTeXStrings, StaticArrays
+# ╔═╡ d3525d21-d733-4b66-84ad-13fa437dd8bf
+using LaTeXStrings, Plots, StaticArrays
 
-# ╔═╡ 666d600c-ca60-4ed9-96fc-515960159cc2
+# ╔═╡ c39fc80a-44a8-42d8-911c-bf1c937e6bba
+struct V2
+	value::SVector{2,Number} # Arrow extends to this point (minus `origin`).
+	origin::SVector{2,Number} # Arrow starts at this point.
+	plottype::Symbol # Plot as either a line or point (defaults to :line).
+	arrow::Symbol # Arrow type: (:arrow, :closed, :open, :none)
+	label::Union{String,Nothing} # Label shown in the legent.
+	annotation::Union{String,Nothing} # Label shown in the chart, half way along.
+	annotationpos::Symbol # Annotation position: (:middle = middle of vector, :end = end of vector. :middle only allowed when plottype == :line.)
+	annotationanchor::Symbol # Annotation anchor: (:left, :center, :right)
+	annotationoffset::SVector{2,Float64}
+	annotationsize::Int64 # Annotation font size.
+	linewidth::Float64 # Line width.
+	linestyle::Symbol # Line style: (:auto, :solid, :dash, :dot, :dashdot, :dashdotdot)
+	color::Union{Symbol,Int64} # Line color.
+
+    function V2(value;
+		o=[0.,0.], pt=:line, arrow=:arrow, l=nothing,
+		a=nothing, ap=:end, aa=:left,
+		ao=(ap==:middle ? [0.15,0.15] : aa == :left ? [0.15, 0.] : [0.,0.]), asz=14,
+		lw=1., ls=:solid, c=:auto)
+		new(value, o, pt, arrow, l, a, ap, aa, ao, asz, lw, ls, c)
+	end
+end
+
+# ╔═╡ e9539e47-dc78-43e7-81de-f3e3267ed197
+function Plots.plot(vectors::Vararg{V2}; kw...)
+	plt = plot([]; label="", aspect_ratio=:equal, kw...)
+	for v in vectors
+		o = v.origin
+		val = o + v.value
+		if v.plottype == :line
+			plot!(
+				[o.x, val.x], [o.y, val.y];
+				linewidth=v.linewidth, linestyle=v.linestyle, arrow=v.arrow, label=v.label, c=v.color
+			)
+		else
+			scatter!([val.x], [val.y]; label=v.label, c=v.color)
+		end
+		if v.annotation != nothing
+			ap = v.annotationpos
+			ao = v.annotationoffset
+			annotate!(
+				(o + ao + (v.value * (ap == :middle ? 0.5 : 1)))..., text(v.annotation, v.annotationsize, v.annotationanchor)
+			)
+		end
+	end
+
+	return plt
+end
+
+# ╔═╡ b8245233-055a-43b6-8170-70eeccf83495
 L"""
 \newcommand{\s}{\enspace}
 \newcommand{\R}{\mathbb{R}}
@@ -17,57 +68,21 @@ L"""
 \newcommand{\align}[1]{\begin{align}#1\end{align}}
 """
 
-# ╔═╡ c39fc80a-44a8-42d8-911c-bf1c937e6bba
-struct V2
-	value::SVector{2,Number} # Arrow extends to this point (minus `origin`).
-	origin::SVector{2,Number} # Arrow starts at this point.
-	arrow::Symbol # Arrow type: (:arrow, :closed, :open, :none)
-	label::Union{String,Nothing} # Label shown in the legent.
-	annotation::Union{String,Nothing} # Label shown in the chart, half way along.
-	annotationpos::Symbol # Annotation position: (:middle, :end)
-	annotationoffset::SVector{2,Float64}
-	plottype::Symbol # Draw as either a line or point (defaults to :line).
-	linewidth::Float64 # Line width.
-	linestyle::Symbol # Line style: (:auto, :solid, :dash, :dot, :dashdot, :dashdotdot)
-	color::Symbol # Line color.
-
-    function V2(value; o=[0.,0.], arrow=:arrow, l=nothing, a=nothing, ap=:middle, ao=[0.15,0.15], pt=:line, lw=1., ls=:solid, c=:auto)
-		new(value, o, arrow, l, a, ap, ao, pt, lw, ls, c)
-	end
-end
-
-# ╔═╡ e9539e47-dc78-43e7-81de-f3e3267ed197
+# ╔═╡ 71c1f166-c912-4fea-8d56-84acdc46c083
+# Hack: Since all md cells depend on the above cell defining LaTeX commands, re-run every cell below this one.
+# From: https://discourse.julialang.org/t/how-to-force-a-pluto-recalculation/80532/6
+html"""
+<script>
+	// Get current cell handle and ID
+	let cell = currentScript.closest('pluto-cell')
+	let id = cell.getAttribute('id')
+	// Find all cells below the current one and extract their ids
+	let cells_below = document.querySelectorAll(`pluto-cell[id='${id}'] ~ pluto-cell`)
+	let cells_below_ids = [...cells_below].map((el) => el.getAttribute('id'))
+	// Use the pluto internal function to re-run all selected cells
+	cell._internal_pluto_actions.set_and_run_multiple(cells_below_ids)
+	</script>
 """
-Draw an arrow for each row vector in `vectors`.
-Arrows extend from each vector's `origin` to its `value`, and are optionally labeled with it's `label`.
-"""
-function draw(vectors::Vararg{V2}; kw...)
-	plt = plot(aspect_ratio=:equal)
-	for v in vectors
-		o = v.origin
-		val = o + v.value
-		if v.plottype == :line
-			plot!(
-				[o.x, val.x], [o.y, val.y];
-				linewidth=v.linewidth, linestyle=v.linestyle, arrow=v.arrow, label=v.label, c=v.color, kw...
-			)
-		else
-			scatter!([val.x], [val.y]; label=v.label)
-		end
-		if v.annotation != nothing
-			ap = v.annotationpos
-			ao = v.annotationoffset
-			scale = ap == :middle ? 0.5 : 1
-			anchor = ap == :middle ? :left : :center
-			annotate!((o + (v.value * scale .+ ao))..., v.annotation, anchor)
-		end
-	end
-
-	return plt
-end
-
-# ╔═╡ 3b8370f3-7002-4fc5-bd40-190c2bde375b
-
 
 # ╔═╡ 0fe32c74-93b0-11ed-0985-1dfb7d1bb10e
 md"""
@@ -98,14 +113,14 @@ md"""
 
 # ╔═╡ b78fb4bf-c0f2-45b3-88bf-f3eb22094823
 let
-	v = [4; 1]; w = [-2; 2]
-	draw(
-		V2(v, lw=2, l=L"v"),
-		V2(w, lw=2, l=L"w"),
-		V2(v+w, lw=4, l=L"v+w"),
-		V2(v-w, lw=4, l=L"v-w"),
-		V2(w, o=v, a=L"+w", ls=:dash),
-		V2(-w, o=v, a=L"-w", ls=:dash),
+	v = [4, 1]; w = [-2, 2]
+	plot(
+		V2(v, lw=2, a=L"v", ap=:middle, ao=[0, 0.25], c=1),
+		V2(w, lw=2, a=L"w", ap=:middle, c=2),
+		V2(v+w, lw=4, a=L"v+w", ap=:middle, aa=:right, ao=[0, 0.4]),
+		V2(v-w, lw=4, a=L"v-w", ap=:middle),
+		V2(w, o=v, a=L"+w", ap=:middle, ls=:dash, c=2),
+		V2(-w, o=v, a=L"-w", ap=:middle, ls=:dash, c=2),
 	)
 end
 
@@ -141,14 +156,14 @@ So, $\b{v} = \v{3\\3}$, and $\b{w} = \v{2\\-2}$.
 
 # ╔═╡ 696e90b5-a8c2-4803-9e74-2d29fef911df
 let
-	v = [3; 3]; w = [2; -2]
-	draw(
-		V2(v, lw=2, l=L"v"),
-		V2(w, lw=2, l=L"w"),
-		V2(v+w, lw=4, a=L"v+w", ao=[0, 0.5]),
-		V2(v-w, lw=4, a=L"v-w"),
-		V2(w, o=v, a=L"+w", ls=:dash),
-		V2(-w, o=v, a=L"-w", ls=:dash),
+	v = [3, 3]; w = [2, -2]
+	plot(
+		V2(v, lw=2, l=L"v", c=1),
+		V2(w, lw=2, l=L"w", c=2),
+		V2(v+w, lw=4, a=L"v+w", ap=:middle, ao=[0, -0.4]),
+		V2(v-w, lw=4, a=L"v-w", ap=:middle, aa=:right, ao=[-0.3, 0]),
+		V2(w, o=v, a=L"+w", ap=:middle, ls=:dash, c=2),
+		V2(-w, o=v, a=L"-w", ap=:middle, ls=:dash, c=2),
 	)
 end
 
@@ -252,15 +267,16 @@ $c\v{2\\1} + d\v{0\\1} \s \text{with} \s c = 0,1,2 \s \text{and} \s d = 0,1,2.$
 
 # ╔═╡ 70fdd975-62bc-4825-a872-d32b2f924362
 let
-	plt = plot()
+	CD = []
 	for c in (0,1,2)
 		for d in (0,1,2)
-			V = c * [2;1] + d * [0;1]
-			scatter!([V[1]], [V[2]], label="", c=1, xlims=(-1, 6))
-			annotate!([(V..., text(L"\enspace c=%$c, d=%$d", 12, :left))])
+			push!(CD, [c,d])
 		end
 	end
-	plt
+	plot(map(
+		cd -> V2(cd[1]*[2,1] + cd[2]*[0, 1];
+		pt=:point, a=L"c=%$(cd[1]), d=%$(cd[2])", c=1, asz=12), CD
+	)...)
 end
 
 # ╔═╡ 0a1a8900-0da3-4c2c-849b-b5ebc6d979e2
@@ -277,16 +293,16 @@ Reproducing Fig. 1.1, and adding the other diagonal, $\b{v} - \b{w} = \v{5\\0},$
 
 # ╔═╡ d804f088-e382-4e5d-ae5e-d256142e668e
 let
-	v = [4; 2]; w = [-1; 2]
-	draw(
-		V2(v, w=2, l=L"v"),
-		V2(w, w=2, l=L"w"),
-		V2(v+w, w=3, l=L"v+w"),
-		V2(w, o=v, a=L"w", ls=:dash),
-		V2(v, o=w, a=L"v", ao=[0, 0.25], ls=:dash),
-		V2(v-w, o=w, a=L"v-w", ao=[1, 0.2], ls=:dash),
-		V2(2v, l=L"2v", w=4),
-		V2(v-w, o=v+w, a=L"v-w", ls=:dash),
+	v = [4, 2]; w = [-1, 2]
+	plot(
+		V2(2v, a=L"2v", ap=:middle, ao=[0, -0.25], lw=4),
+		V2(v, lw=2, l=L"v", c=1),
+		V2(w, lw=2, l=L"w", c=2),
+		V2(v+w, lw=2, a=L"v+w", ap=:middle, ao=[0.75, 0.75]),
+		V2(v, o=w, c=1, a=L"+v", ap=:middle, aa=:right, ao=[0, 0.25], ls=:dash),
+		V2(w, o=v, c=2, a=L"+w", ap=:middle, ls=:dash),
+		V2(v-w, o=w, c=3, a=L"v-w", ap=:middle, aa=:right, ao=[-0.5, 0.25], ls=:dash),
+		V2(v-w, o=v+w, c=3, a=L"+(v-w)", ap=:middle, aa=:center, ao=[0, 0.25], ls=:dash),
 	)
 end
 
@@ -304,7 +320,8 @@ Let's plot the three given corners:
 three_corners = [1;1;;1;3;;4;2] # each column is a corner
 
 # ╔═╡ 9bbff24a-623a-403d-85df-109bfebd6c3b
-scatter(eachrow(three_corners)..., series_annotations=text.([" c1", " c2", " c3"], 12, :left), label="", xlims=(-3,5), ylims=(-1,5), )
+plot(map(corner -> V2(corner[2]; a=L"c%$(corner[1])", pt=:point, c=1),
+	enumerate(eachcol(three_corners)))...; xlims=(-3,5), ylims=(-1,5))
 
 # ╔═╡ c36df7f9-e76a-45d6-aecc-f2c3d2e69ffa
 md"""
@@ -320,18 +337,19 @@ Let's see these solutions plotted out along with the other corners:
 # ╔═╡ 38f6fa60-4ce3-4107-9777-ab93d8a104f0
 let
 	c1, c2, c3 = eachcol(three_corners)
-	possible_fourth_corners = (c3 + (c2 - c1), c3 - (c2 - c1), c2 - (c3 - c1))
+	possible_fourth_corners = (c3 + (c2-c1), c3 - (c2-c1), c2 - (c3-c1))
 	pgram_corners = map(
 		fourth_corner -> hcat(three_corners, fourth_corner),
 		possible_fourth_corners
 	)
+
 	plots = map(
-		corners -> scatter(eachrow(corners)...,
-			series_annotations=text.([" c1", " c2", " c3", " c4"], 11, :left),
-			label="", xlims=(-3,5), ylims=(-1,5)),
-		pgram_corners
+		corners -> plot(
+			map(corner -> V2(corner[2]; a=L"c%$(corner[1])", pt=:point, ao=[0.4, 0.1], asz=12, c=1),
+				enumerate(eachcol(corners)))...; xlims=(-3,5), ylims=(-1,5)
+		), pgram_corners
 	)
-	plot(plots..., layout = 3, aspect_ratio=:equal)
+	plot(plots..., layout=3, aspect_ratio=:equal)
 end
 
 # ╔═╡ df1c4083-065b-4bca-a9a0-f70ed6bf4b52
@@ -349,7 +367,6 @@ $\align{
 \b{j} + \b{k} &= (0,1,1)\\
 \b{i} + \b{j} + \b{k} &= (1,1,1)
 }$
-
 """
 
 # ╔═╡ 50b358af-6c15-4a2c-a384-8ef0281b5469
@@ -432,8 +449,8 @@ end
 
 # ╔═╡ 62cea919-4d7a-4432-b823-dfe16284fcf6
 let
-	Vectors_clock = map(iv -> V2(last(iv); a="$(first(iv))", ap=:end, ao=last(iv) * 0.15, l="", c=:black), eachrow(V_clock) |> enumerate)
-	draw(Vectors_clock...; xlims=(-1.5, 1.5), ylims=(-1.5, 1.5))
+	Vectors_clock = map(iv -> V2(last(iv); a="$(first(iv))", aa=:center, ao=last(iv) * 0.15, l="", c=:black), eachrow(V_clock) |> enumerate)
+	plot(Vectors_clock...; xlims=(-1.5, 1.5), ylims=(-1.5, 1.5))
 end
 
 # ╔═╡ 8dafef43-fc69-46c2-8ec0-48c7b839dfcf
@@ -448,8 +465,8 @@ md"Now, with the origin at 6:00..."
 # ╔═╡ 46a4d33b-2ca1-476b-85bf-9f6c4c3a62b7
 let
 	V_clock_6_origin = V_clock .+ [0 1]
-	Vectors_clock = map(iv -> V2(last(iv); a="$(first(iv) == 6 ? "" : first(iv))", ap=:end, ao=last(iv) * 0.1, l="", c=:black, o=[0,-1]), eachrow(V_clock_6_origin) |> enumerate)
-	draw(Vectors_clock...; xlims=(-1.5, 1.5), ylims=(-1.5, 1.5))
+	Vectors_clock = map(iv -> V2(last(iv); a="$(first(iv) == 6 ? "" : first(iv))", aa=:center, ao=last(iv) * 0.1, l="", c=:black, o=[0,-1]), eachrow(V_clock_6_origin) |> enumerate)
+	plot(Vectors_clock...; xlims=(-1.5, 1.5), ylims=(-1.5, 1.5))
 end
 
 # ╔═╡ 163f44c4-546f-4a29-a028-52d9b4f6be81
@@ -463,14 +480,123 @@ Probs. **15-19** deal with the following $\b{v}$ and $\b{w}$: (The book does not
 # ╔═╡ 9ec03fac-1a30-4093-b480-e5b32e35ab5e
 let
 	w = [1, 6]; v = [6, 1]
-	draw(
-		V2(w, a=L"w", ap=:end, ao=w*0.02),
-		V2(v, a=L"v", ap=:end, ao=v*0.02),
+	plot(
+		V2(v, a=L"v", aa=:center),
+		V2(w, a=L"w", aa=:center),
 		V2(v - w; o=w, arrow=:none, ls=:dash),
-		V2(0.5(v + w); a=L"u = \frac{1}{5}(v + w)", ap=:end, ao=[1.3, 0], pt=:point)
-		; xlims=(0, 7)
+		V2(0.5(v + w); a=L"u = \frac{1}{2}(v + w)", pt=:point);
+		xlims=(0, 7)
 	)
 end
+
+# ╔═╡ 2321a3e5-2f23-4478-812e-2f6e2ba28524
+md"""
+**15.** Mark the points $\frac{3}{4}\b{v} + \frac{1}{4}\b{w}$ and $\frac{1}{4}\b{v} + \frac{1}{4}\b{w}$ and $\b{v} + \b{w}$.
+"""
+
+# ╔═╡ 1f4804ba-fee7-4322-857a-eda7edbd7293
+let
+	v = [6, 1]; w = [1, 6]
+	plot(
+		V2(v, a=L"v"),
+		V2(w, a=L"w"),
+		V2(v - w; o=w, arrow=:none, ls=:dash),
+		V2(0.75v + 0.25w; a=L"u = \frac{3}{4}v +\frac{1}{4}w", pt=:point, asz=12),
+		V2(0.25v + 0.25w; a=L"u = \frac{1}{4}v + \frac{1}{4}w", pt=:point, asz=12),
+		V2(v + w; a=L"u = v + w", pt=:point),
+	)
+end
+
+# ╔═╡ 983448de-2e7f-46f0-92bc-d1cb30310a73
+md"""
+**16.** Mark the point $-\b{v} + 2\b{w}$ and any other combination $c\b{v} + d\b{w}$ with $c + d = 1$. Draw the line of all combinations that have $c + d = 1$.
+"""
+
+# ╔═╡ 3e607e6f-2b4f-486c-a09b-ae44616e5310
+let
+	v = [6, 1]; w = [1, 6]
+	C = -1:0.25:2
+	D = 1 .- C
+	plot(
+		V2(v, l=L"v"),
+		V2(w, l=L"w"),
+		V2(-3v+3w; o=2v-w, l=L"c+d=1", arrow=:none, ls=:dash, lw=2),
+		map(cd ->
+			V2(first(cd)*v + last(cd)*w; # Using matmul: [v w] * cd
+				pt=:point, c=:black, a=L"%$(cd[1])v + %$(cd[2])w",
+				ao=[0.5, 0], asz=6), 
+			eachrow([C D])
+		)...
+	)
+end
+
+# ╔═╡ 1350d262-9ac3-46c4-85b6-b6c3102e36af
+md"""
+**17.** Locate $\frac{1}{3}\b{v} + \frac{1}{3}\b{w}$ and $\frac{2}{3}\b{v} + \frac{2}{3}\b{w}$. The combinations $c\b{v}+c\b{w}$ fill out what line?
+"""
+
+# ╔═╡ 0182eaeb-953a-4314-9e5d-14be03d2aaa1
+let
+	v = [6, 1]; w = [1, 6]
+	C = -1:0.25:1
+	plot(
+		V2(v, l=L"v"),
+		V2(w, l=L"w"),
+		V2(2(v+w); o=-(v+w), l=L"c=d", arrow=:none, ls=:dash, lw=2),
+		map(c ->
+			V2(c*v + c*w; pt=:point, c=:black, a=L"%$c(v + w)", asz=6), 
+			C
+		)...
+	)
+end
+
+# ╔═╡ 747a31e0-b161-40bb-9c3b-70b7238fa898
+md"""
+**18.** Restricted by $0 \leq c \leq 1$ and $0 \leq d \leq 1$, shade in all combinations $c\b{v} + d\b{w}$.
+
+This area is the parallelogram with points $\b{0}, \b{v}, \b{v}+\b{w}, \b{w}$:
+"""
+
+# ╔═╡ eeaf50ba-9f98-4747-afa5-a9ed66bc4d77
+let
+	v = [6, 1]; w = [1, 6]
+	shaded_area = Shape(map(Tuple, [[0, 0], v, v+w, w]))
+	plt = plot(
+		V2(v, a=L"v", c=1, lw=3),
+		V2(w, a=L"w", ao=[0, 0.3], c=2, lw=3),
+		V2(v, o=w, c=1, ls=:dash),
+		V2(w, o=v, c=2, ls=:dash, a=L"v+w");
+		xlim=(0, 8), ylim=(0, 8)
+	)
+	plot!(shaded_area, fillcolor = plot_color(:gray, 0.3), linecolor=nothing, label=L"cv + dw : 0 \leq c \leq 1, 0 \leq d \leq 1")
+	plt
+end
+
+# ╔═╡ 3d9b7861-5014-49ec-92dc-4784dfde036c
+md"""
+**19.** Restricted only b $c \geq 0$ and $d \geq 0$, draw the "cone" of all combinations $c\b{v} + d\b{w}$.
+"""
+
+# ╔═╡ 1b5c5a4b-a413-4d05-b220-f3e334e0a3c5
+let
+	v = [6, 1]; w = [1, 6]
+	shaded_area = Shape(map(Tuple, [[0, 0], 4v, 4w]))
+	plt = plot(
+		V2(v, a=L"v", c=1, lw=3),
+		V2(w, a=L"w", c=2, lw=3);
+		xlim=(0, 12), ylim=(0, 12)
+	)
+	plot!(shaded_area, fillcolor = plot_color(:gray, 0.3), linecolor=nothing, label=L"cv + dw : c \geq 0, d \geq 0")
+	plt
+end
+
+# ╔═╡ 118e1443-63b3-47d3-aa71-c8ed8a385865
+md"""
+Probs. **20-25** deal with the following $\b{u}, \b{v},$ and $\b{w}$: (The book does not define the vectors precisely, as the lessons work with arbitrary vectors.)
+"""
+
+# ╔═╡ b0eec3fe-5a6c-49bb-aed6-6f13e45a68c2
+
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -491,7 +617,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.8.5"
 manifest_format = "2.0"
-project_hash = "5d461c8f920942c5e3194ce53cf915a055d287bc"
+project_hash = "9b91ffee99c6d7741eb19032f03d8d1ac037f9b1"
 
 [[deps.ArgTools]]
 uuid = "0dad84c5-d112-42e6-8d28-ef12dabb789f"
@@ -702,9 +828,9 @@ version = "1.0.2"
 
 [[deps.HTTP]]
 deps = ["Base64", "CodecZlib", "Dates", "IniFile", "Logging", "LoggingExtras", "MbedTLS", "NetworkOptions", "OpenSSL", "Random", "SimpleBufferStream", "Sockets", "URIs", "UUIDs"]
-git-tree-sha1 = "a1fd86ba1fae7c73fd98c7e60f8adf036c31d441"
+git-tree-sha1 = "eb5aa5e3b500e191763d35198f859e4b40fff4a6"
 uuid = "cd3eb016-35fb-5094-929b-558a96fad6f3"
-version = "1.7.2"
+version = "1.7.3"
 
 [[deps.HarfBuzz_jll]]
 deps = ["Artifacts", "Cairo_jll", "Fontconfig_jll", "FreeType2_jll", "Glib_jll", "Graphite2_jll", "JLLWrappers", "Libdl", "Libffi_jll", "Pkg"]
@@ -1423,11 +1549,11 @@ version = "1.4.1+0"
 """
 
 # ╔═╡ Cell order:
-# ╠═926db787-d1f7-475d-9656-2d06e11b85f8
-# ╠═666d600c-ca60-4ed9-96fc-515960159cc2
+# ╠═d3525d21-d733-4b66-84ad-13fa437dd8bf
 # ╠═c39fc80a-44a8-42d8-911c-bf1c937e6bba
 # ╠═e9539e47-dc78-43e7-81de-f3e3267ed197
-# ╠═3b8370f3-7002-4fc5-bd40-190c2bde375b
+# ╠═b8245233-055a-43b6-8170-70eeccf83495
+# ╠═71c1f166-c912-4fea-8d56-84acdc46c083
 # ╠═0fe32c74-93b0-11ed-0985-1dfb7d1bb10e
 # ╠═56dad226-65bc-4f0b-ab1f-c39c9e7b1270
 # ╠═b78fb4bf-c0f2-45b3-88bf-f3eb22094823
@@ -1459,5 +1585,17 @@ version = "1.4.1+0"
 # ╠═163f44c4-546f-4a29-a028-52d9b4f6be81
 # ╠═4bd91592-20a9-4b34-a477-f5143a5e440d
 # ╠═9ec03fac-1a30-4093-b480-e5b32e35ab5e
+# ╠═2321a3e5-2f23-4478-812e-2f6e2ba28524
+# ╠═1f4804ba-fee7-4322-857a-eda7edbd7293
+# ╠═983448de-2e7f-46f0-92bc-d1cb30310a73
+# ╠═3e607e6f-2b4f-486c-a09b-ae44616e5310
+# ╠═1350d262-9ac3-46c4-85b6-b6c3102e36af
+# ╠═0182eaeb-953a-4314-9e5d-14be03d2aaa1
+# ╠═747a31e0-b161-40bb-9c3b-70b7238fa898
+# ╠═eeaf50ba-9f98-4747-afa5-a9ed66bc4d77
+# ╠═3d9b7861-5014-49ec-92dc-4784dfde036c
+# ╠═1b5c5a4b-a413-4d05-b220-f3e334e0a3c5
+# ╠═118e1443-63b3-47d3-aa71-c8ed8a385865
+# ╠═b0eec3fe-5a6c-49bb-aed6-6f13e45a68c2
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
