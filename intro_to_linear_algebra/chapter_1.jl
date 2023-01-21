@@ -24,12 +24,12 @@ struct V2
 	annotationsize::Int64 # Annotation font size.
 	linewidth::Float64 # Line width.
 	linestyle::Symbol # Line style: (:auto, :solid, :dash, :dot, :dashdot, :dashdotdot)
-	color::Union{Symbol,Int64} # Line color.
+	color::Union{Int64,Symbol,String} # Line color.
 
     function V2(value;
 		o=[0.,0.], pt=:line, arrow=:arrow, l=nothing,
 		a=nothing, ap=:end, aa=:left,
-		ao=(ap==:middle ? [0.15,0.15] : aa == :left ? [0.15, 0.] : [0.,0.]), asz=14,
+		ao=(ap==:middle ? [0.,0.] : aa == :left ? [0., 0.] : [0.,0.]), asz=20,
 		lw=1., ls=:solid, c=:auto)
 		new(value, o, pt, arrow, l, a, ap, aa, ao, asz, lw, ls, c)
 	end
@@ -38,22 +38,40 @@ end
 # ╔═╡ 9ba81f31-d97d-4521-ba04-56faba024708
 default_colors = distinguishable_colors(10, [RGB(1,1,1), RGB(0,0,0)], dropseed=true)
 
-# ╔═╡ 7ba690a1-82be-4c84-bd83-59cb0d564c47
-Cycle([:color])
+# ╔═╡ f1264c36-0526-4dc5-81c5-47d2a53416f5
+typeof(default_colors[1])
+
+# ╔═╡ cedc211f-2594-48f3-a628-f07e6356ee82
+parse(RGB, String(:red))
 
 # ╔═╡ e9539e47-dc78-43e7-81de-f3e3267ed197
+# kw args:
+#  - :xlims, :ylims
+#  - :
 function Makie.plot(vectors::Vararg{V2}; kw...)
-	f = Figure()
-	Axis(f[1, 1])
+	if haskey(kw, :pos)
+		f = nothing
+		pos = kw[:pos]
+	else
+		f = Figure()
+		pos = Axis(f[1, 1])
+	end
+
 	tri = BezierPath([
 		MoveTo(Point2f(-0.5, -1)), LineTo(0, 0), LineTo(0.5, -1), ClosePath()
 	])
 	pix_scale_2d = camera(Scene()).pixel_space[][1:2,1:2]
 	for (i, v) in enumerate(vectors)
-		color = isa(v.color, Symbol) && v.color != :auto ? v.color : default_colors[isa(v.color, Int64) ? v.color : i]
+		color = (isa(v.color, Symbol) || isa(v.color, String)) && v.color != :auto ?
+			Colors.parse(RGB, String(v.color)) :
+			default_colors[isa(v.color, Int64) ? v.color : i]
 		o = v.origin
 		if v.plottype == :line
 			if v.arrow == :none
+				lines!(pos,
+					[o, o + v.value];
+					linewidth=v.linewidth, linestyle=v.linestyle, label=v.label, linecolor=color,
+				)
 			else
 				arrowsize = 15 # In pixel space
 				# Convert scene value to pix value.
@@ -61,9 +79,9 @@ function Makie.plot(vectors::Vararg{V2}; kw...)
 				# Subtract arrow in pixel space, in the directiontion of the value.
 				val_pixels -= normalize(val_pixels) * arrowsize*2
 				# Convert value back to pixel space.
-				lines!(
+				lines!(pos,
 					[o, o + pix_scale_2d * val_pixels];
-					linewidth=v.linewidth, linestyle=v.linestyle, label=v.label, linecolor=color,
+					linewidth=v.linewidth, linestyle=v.linestyle, label=v.label, color=color,
 				)
 				# Makie bug - `rotations` doesn't take axis scale into account: https://github.com/MakieOrg/Makie.jl/issues/860
 				marker_v = pix_scale_2d * v.value
@@ -72,21 +90,27 @@ function Makie.plot(vectors::Vararg{V2}; kw...)
 					marker=tri,
 					markersize=arrowsize,
 					rotations=[-pi/2 + atan(marker_v[2], marker_v[1])],
+					color=color,
 				)
 			end
 		else
-			scatter!([v.value.x], [v.value.y]; label=v.label, color=color)
+			scatter!(pos, [v.value.x], [v.value.y]; label=v.label, color=color)
 		end
 		if v.annotation != nothing
 			ap = v.annotationpos
 			ao = v.annotationoffset
 			aa = v.annotationanchor
-			# v.annotationsize, v.annotationanchor
-			text!([o + ao + (v.value * (ap == :middle ? 0.5 : 1))];
-			text=L"%$(v.annotation)", align=(aa, :center), fontsize=v.annotationsize)
+			text!(pos, [o + ao + (v.value * (ap == :middle ? 0.5 : 1))];
+			text=(contains(v.annotation, "\$") ? L"%$(v.annotation)" : v.annotation), align=(aa, :center), fontsize=v.annotationsize)
 		end
 	end
 
+	if haskey(kw, :xlims)
+		xlims!(pos, kw[:xlims]...)
+	end
+	if haskey(kw, :ylims)
+		ylims!(pos, kw[:ylims]...)
+	end
 	return f
 end
 
@@ -147,12 +171,12 @@ md"""
 let
 	v = [4, 1]; w = [-2, 2]
 	plot(
-		V2(v, lw=2, a=L"v", ap=:middle, ao=[0, 0.25], c=1),
-		V2(w, lw=2, a=L"w", ap=:middle, c=2),
-		V2(v+w, lw=4, a=L"v+w", ap=:middle, aa=:right, ao=[0, 0.4]),
-		V2(v-w, lw=4, a=L"v-w", ap=:middle),
-		V2(w, o=v, a=L"+w", ap=:middle, ls=:dash, c=2),
-		V2(-w, o=v, a=L"-w", ap=:middle, ls=:dash, c=2),
+		V2(v, lw=2, a=L"v", ap=:middle, ao=[0, 0.2], c=1),
+		V2(w, lw=2, a=L"w", ap=:middle, ao=[0.1, 0.], c=2),
+		V2(v+w, lw=4, a=L"v+w", ap=:middle, aa=:right, ao=[-0.15, 0.1]),
+		V2(v-w, lw=4, a=L"v-w", ap=:middle, ao=[0., 0.15]),
+		V2(w, o=v, a=L"+w", ap=:middle, ao=[0.1, 0.], ls=:dash, c=2),
+		V2(-w, o=v, a=L"-w", ap=:middle, ao=[0.1, 0.], ls=:dash, c=2),
 	)
 end
 
@@ -190,12 +214,12 @@ So, $\b{v} = \v{3\\3}$, and $\b{w} = \v{2\\-2}$.
 let
 	v = [3, 3]; w = [2, -2]
 	plot(
-		V2(v, lw=2, l=L"v", c=1),
-		V2(w, lw=2, l=L"w", c=2),
-		V2(v+w, lw=4, a=L"v+w", ap=:middle, ao=[0, -0.4]),
-		V2(v-w, lw=4, a=L"v-w", ap=:middle, aa=:right, ao=[-0.3, 0]),
-		V2(w, o=v, a=L"+w", ap=:middle, ls=:dash, c=2),
-		V2(-w, o=v, a=L"-w", ap=:middle, ls=:dash, c=2),
+		V2(v, lw=2, a=L"v", ap=:middle, ao=[0., 0.3], c=1),
+		V2(w, lw=2, a=L"w", ap=:middle, ao=[0., 0.25], c=2),
+		V2(v+w, lw=4, a=L"v+w", ap=:middle, ao=[0, -0.3]),
+		V2(v-w, lw=4, a=L"v-w", ap=:middle, aa=:right, ao=[-0.1, 0]),
+		V2(w, o=v, a=L"+w", ap=:middle, ao=[0., 0.15], ls=:dash, c=2),
+		V2(-w, o=v, a=L"-w", ap=:middle, ao=[0., 0.15], ls=:dash, c=2),
 	)
 end
 
@@ -307,8 +331,8 @@ let
 	end
 	plot(map(
 		cd -> V2(cd[1]*[2,1] + cd[2]*[0, 1];
-		pt=:point, a=L"c=%$(cd[1]), d=%$(cd[2])", c=1, asz=12), CD
-	)...)
+		pt=:point, a=L"c=%$(cd[1]), d=%$(cd[2])", ao=[0.05, 0.], c=1), CD
+	)...; xlims=(-1, 5))
 end
 
 # ╔═╡ 0a1a8900-0da3-4c2c-849b-b5ebc6d979e2
@@ -327,14 +351,14 @@ Reproducing Fig. 1.1, and adding the other diagonal, $\b{v} - \b{w} = \v{5\\0},$
 let
 	v = [4, 2]; w = [-1, 2]
 	plot(
-		V2(2v, a=L"2v", ap=:middle, ao=[0, -0.25], lw=4),
-		V2(v, lw=2, l=L"v", c=1),
+		V2(2v, a=L"2v", ap=:middle, ao=[0, -0.2], lw=4),
+		V2(v, lw=2, a=L"v", ap=:middle, ao=[0., -0.15], c=1),
 		V2(w, lw=2, l=L"w", c=2),
 		V2(v+w, lw=2, a=L"v+w", ap=:middle, ao=[0.75, 0.75]),
-		V2(v, o=w, c=1, a=L"+v", ap=:middle, aa=:right, ao=[0, 0.25], ls=:dash),
-		V2(w, o=v, c=2, a=L"+w", ap=:middle, ls=:dash),
-		V2(v-w, o=w, c=3, a=L"v-w", ap=:middle, aa=:right, ao=[-0.5, 0.25], ls=:dash),
-		V2(v-w, o=v+w, c=3, a=L"+(v-w)", ap=:middle, aa=:center, ao=[0, 0.25], ls=:dash),
+		V2(v, o=w, c=1, a=L"+v", ap=:middle, aa=:right, ao=[0, 0.2], ls=:dash),
+		V2(w, o=v, c=2, a=L"+w", ap=:middle, ao=[0.1, 0.1], ls=:dash),
+		V2(v-w, o=w, c=3, a=L"v-w", ap=:middle, aa=:right, ao=[-0.5, 0.2], ls=:dash),
+		V2(v-w, o=v+w, c=3, a=L"+(v-w)", ap=:middle, aa=:center, ao=[0, 0.2], ls=:dash),
 	)
 end
 
@@ -352,8 +376,8 @@ Let's plot the three given corners:
 three_corners = [1;1;;1;3;;4;2] # each column is a corner
 
 # ╔═╡ 9bbff24a-623a-403d-85df-109bfebd6c3b
-plot(map(corner -> V2(corner[2]; a=L"c%$(corner[1])", pt=:point, c=1),
-	enumerate(eachcol(three_corners)))...; xlims=(-3,5), ylims=(-1,5))
+plot(map(corner -> V2(corner[2]; a=L"c%$(corner[1])", ao=[0.05, 0], pt=:point, c=1),
+	enumerate(eachcol(three_corners)))...)
 
 # ╔═╡ c36df7f9-e76a-45d6-aecc-f2c3d2e69ffa
 md"""
@@ -374,16 +398,16 @@ let
 		fourth_corner -> hcat(three_corners, fourth_corner),
 		possible_fourth_corners
 	)
-
-	plots = map(
-		corners -> plot(
-			map(corner -> V2(corner[2]; a=L"c%$(corner[1])", pt=:point, ao=[0.4, 0.1], asz=12, c=1),
-				enumerate(eachcol(corners)))...; xlims=(-3,5), ylims=(-1,5)
-		), pgram_corners
+	f = Figure()
+	positions = map(p -> Axis(f[p...]), ([1, 1], [2, 1], [1, 2]))
+	corners_positions = zip(pgram_corners, positions)
+	map(
+		corners_pos -> plot(
+			map(corner -> V2(corner[2]; a=L"c%$(corner[1])", pt=:point, ao=[0.2, 0.05], c=1),
+				enumerate(eachcol(corners_pos[1])))...; pos=corners_pos[2], xlims=(-3,5), ylims=(-1,5)
+		), corners_positions
 	)
-	# plot(plots..., layout=3, aspect_ratio=:equal)
-	layout = grid(plots...)
-	display(layout)
+	f
 end
 
 # ╔═╡ df1c4083-065b-4bca-a9a0-f70ed6bf4b52
@@ -483,7 +507,7 @@ end
 
 # ╔═╡ 62cea919-4d7a-4432-b823-dfe16284fcf6
 let
-	Vectors_clock = map(iv -> V2(last(iv); a="$(first(iv))", aa=:center, ao=last(iv) * 0.15, l="", c=:black), eachrow(V_clock) |> enumerate)
+	Vectors_clock = map(iv -> V2(last(iv); a="$(first(iv))", aa=:center, ao=last(iv) * 0.1, l="", c=:black), eachrow(V_clock) |> enumerate)
 	plot(Vectors_clock...; xlims=(-1.5, 1.5), ylims=(-1.5, 1.5))
 end
 
@@ -499,7 +523,7 @@ md"Now, with the origin at 6:00..."
 # ╔═╡ 46a4d33b-2ca1-476b-85bf-9f6c4c3a62b7
 let
 	V_clock_6_origin = V_clock .+ [0 1]
-	Vectors_clock = map(iv -> V2(last(iv); a="$(first(iv) == 6 ? "" : first(iv))", aa=:center, ao=last(iv) * 0.1, l="", c=:black, o=[0,-1]), eachrow(V_clock_6_origin) |> enumerate)
+	Vectors_clock = map(iv -> V2(last(iv); a="$(first(iv) == 6 ? "" : first(iv))", aa=:center, ao=last(iv) * 0.075, l="", c=:black, o=[0,-1]), eachrow(V_clock_6_origin) |> enumerate)
 	plot(Vectors_clock...; xlims=(-1.5, 1.5), ylims=(-1.5, 1.5))
 end
 
@@ -515,10 +539,10 @@ Probs. **15-19** deal with the following $\b{v}$ and $\b{w}$: (The book does not
 let
 	w = [1, 6]; v = [6, 1]
 	plot(
-		V2(v, a=L"v", aa=:center),
-		V2(w, a=L"w", aa=:center),
+		V2(v, a=L"v"),
+		V2(w, a=L"w"),
 		V2(v - w; o=w, arrow=:none, ls=:dash),
-		V2(0.5(v + w); a=L"u = \frac{1}{2}(v + w)", pt=:point);
+		V2(0.5(v + w); a=L"u = \frac{1}{2}(v + w)", ao=[0.1, 0], pt=:point);
 		xlims=(0, 7)
 	)
 end
@@ -535,8 +559,8 @@ let
 		V2(v, a=L"v"),
 		V2(w, a=L"w"),
 		V2(v - w; o=w, arrow=:none, ls=:dash),
-		V2(0.75v + 0.25w; a=L"u = \frac{3}{4}v +\frac{1}{4}w", pt=:point, asz=12),
-		V2(0.25v + 0.25w; a=L"u = \frac{1}{4}v + \frac{1}{4}w", pt=:point, asz=12),
+		V2(0.75v + 0.25w; a=L"u = \frac{3}{4}v +\frac{1}{4}w", ao=[0.1, 0], pt=:point),
+		V2(0.25v + 0.25w; a=L"u = \frac{1}{4}v + \frac{1}{4}w", ao=[0.1, 0], pt=:point),
 		V2(v + w; a=L"u = v + w", pt=:point),
 	)
 end
@@ -558,9 +582,9 @@ let
 		map(cd ->
 			V2(first(cd)*v + last(cd)*w; # Using matmul: [v w] * cd
 				pt=:point, c=:black, a=L"%$(cd[1])v + %$(cd[2])w",
-				ao=[0.5, 0], asz=6), 
+				ao=[0.3, 0]), 
 			eachrow([C D])
-		)...
+		)...; xlims=(-5, 15)
 	)
 end
 
@@ -578,9 +602,9 @@ let
 		V2(w, l=L"w"),
 		V2(2(v+w); o=-(v+w), l=L"c=d", arrow=:none, ls=:dash, lw=2),
 		map(c ->
-			V2(c*v + c*w; pt=:point, c=:black, a=L"%$c(v + w)", asz=6), 
+			V2(c*v + c*w; pt=:point, c=:black, a=L"%$c(v + w)", ao=[0.3, 0.]), 
 			C
-		)...
+		)...; xlims=(-8, 10)
 	)
 end
 
@@ -1966,7 +1990,8 @@ version = "3.5.0+0"
 # ╠═5c1f27a1-a3d1-420c-938e-0fd665d973ca
 # ╠═c39fc80a-44a8-42d8-911c-bf1c937e6bba
 # ╠═9ba81f31-d97d-4521-ba04-56faba024708
-# ╠═7ba690a1-82be-4c84-bd83-59cb0d564c47
+# ╠═f1264c36-0526-4dc5-81c5-47d2a53416f5
+# ╠═cedc211f-2594-48f3-a628-f07e6356ee82
 # ╠═e9539e47-dc78-43e7-81de-f3e3267ed197
 # ╠═b8245233-055a-43b6-8170-70eeccf83495
 # ╠═71c1f166-c912-4fea-8d56-84acdc46c083
