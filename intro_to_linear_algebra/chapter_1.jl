@@ -45,36 +45,45 @@ Cycle([:color])
 function Makie.plot(vectors::Vararg{V2}; kw...)
 	f = Figure()
 	Axis(f[1, 1])
-	arrowsize = 40 # In pixel space
+	tri = BezierPath([
+		MoveTo(Point2f(-0.5, -1)), LineTo(0, 0), LineTo(0.5, -1), ClosePath()
+	])
 	pix_scale_2d = camera(Scene()).pixel_space[][1:2,1:2]
 	for (i, v) in enumerate(vectors)
 		color = isa(v.color, Symbol) && v.color != :auto ? v.color : default_colors[isa(v.color, Int64) ? v.color : i]
 		o = v.origin
-		val = v.value
 		if v.plottype == :line
 			if v.arrow == :none
 			else
-				# This is wrong! Asking for help here: https://github.com/MakieOrg/Makie.jl/issues/2607
+				arrowsize = 15 # In pixel space
 				# Convert scene value to pix value.
-				val_pixels = (pix_scale_2d ^ -1) * val
-				# Subtract half the arrow in pixel space, in the directiontion of the value.
-				val_pixels -= normalize(val) * (arrowsize*2)
+				val_pixels = (pix_scale_2d ^ -1) * v.value
+				# Subtract arrow in pixel space, in the directiontion of the value.
+				val_pixels -= normalize(val_pixels) * arrowsize*2
 				# Convert value back to pixel space.
-				val = pix_scale_2d * val_pixels
-				arrows!(
-					[o.x], [o.y], [val[1]], [val[2]];
-					linewidth=v.linewidth, linestyle=v.linestyle, arrow=v.arrow, label=v.label, linecolor=color, arrowcolor=color, arrowsize=arrowsize,
+				lines!(
+					[o, o + pix_scale_2d * val_pixels];
+					linewidth=v.linewidth, linestyle=v.linestyle, label=v.label, linecolor=color,
+				)
+				# Makie bug - `rotations` doesn't take axis scale into account: https://github.com/MakieOrg/Makie.jl/issues/860
+				marker_v = pix_scale_2d * v.value
+				scatter!(
+					[o + v.value];
+					marker=tri,
+					markersize=arrowsize,
+					rotations=[-pi/2 + atan(marker_v[2], marker_v[1])],
 				)
 			end
 		else
-			scatter!([val.x], [val.y]; label=v.label, c=v.color)
+			scatter!([v.value.x], [v.value.y]; label=v.label, color=color)
 		end
 		if v.annotation != nothing
 			ap = v.annotationpos
 			ao = v.annotationoffset
-			# annotate!(
-			# 	(o + ao + (v.value * (ap == :middle ? 0.5 : 1)))..., text(v.annotation, v.annotationsize, v.annotationanchor)
-			# )
+			aa = v.annotationanchor
+			# v.annotationsize, v.annotationanchor
+			text!([o + ao + (v.value * (ap == :middle ? 0.5 : 1))];
+			text=L"%$(v.annotation)", align=(aa, :center), fontsize=v.annotationsize)
 		end
 	end
 
@@ -372,7 +381,9 @@ let
 				enumerate(eachcol(corners)))...; xlims=(-3,5), ylims=(-1,5)
 		), pgram_corners
 	)
-	plot(plots..., layout=3, aspect_ratio=:equal)
+	# plot(plots..., layout=3, aspect_ratio=:equal)
+	layout = grid(plots...)
+	display(layout)
 end
 
 # ╔═╡ df1c4083-065b-4bca-a9a0-f70ed6bf4b52
@@ -643,7 +654,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.8.5"
 manifest_format = "2.0"
-project_hash = "ee223cb9815e851c2d29b2ffe8757f7aecc718ef"
+project_hash = "d3dfeb0e83bd8531009cb08cdf80b2edeb18740f"
 
 [[deps.AbstractFFTs]]
 deps = ["ChainRulesCore", "LinearAlgebra"]
@@ -724,9 +735,9 @@ version = "0.5.1"
 
 [[deps.ChainRulesCore]]
 deps = ["Compat", "LinearAlgebra", "SparseArrays"]
-git-tree-sha1 = "e7ff6cadf743c098e08fca25c91103ee4303c9bb"
+git-tree-sha1 = "c6d890a52d2c4d55d326439580c3b8d0875a77d9"
 uuid = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
-version = "1.15.6"
+version = "1.15.7"
 
 [[deps.ChangesOfVariables]]
 deps = ["ChainRulesCore", "LinearAlgebra", "Test"]
@@ -961,9 +972,9 @@ version = "0.8.1"
 
 [[deps.GPUArraysCore]]
 deps = ["Adapt"]
-git-tree-sha1 = "6872f5ec8fd1a38880f027a26739d42dcda6691f"
+git-tree-sha1 = "57f7cde02d7a53c9d1d28443b9f11ac5fbe7ebc9"
 uuid = "46192b85-c4d5-4398-a991-12ede77f4527"
-version = "0.1.2"
+version = "0.1.3"
 
 [[deps.GeoInterface]]
 deps = ["Extents"]
@@ -1515,9 +1526,9 @@ version = "8.0.1001+0"
 
 [[deps.QuadGK]]
 deps = ["DataStructures", "LinearAlgebra"]
-git-tree-sha1 = "97aa253e65b784fd13e83774cadc95b38011d734"
+git-tree-sha1 = "de191bc385072cc6c7ed3ffdc1caeed3f22c74d4"
 uuid = "1fd47b50-473d-5c70-9696-f719f8f3bcdc"
-version = "2.6.0"
+version = "2.7.0"
 
 [[deps.REPL]]
 deps = ["InteractiveUtils", "Markdown", "Sockets", "Unicode"]
