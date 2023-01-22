@@ -18,8 +18,8 @@ struct V2
 	arrow::Symbol # Arrow type: (:arrow, :closed, :open, :none)
 	label::Union{String,Nothing} # Label shown in the legent.
 	annotation::Union{String,Nothing} # Label shown in the chart, half way along.
-	annotationpos::Symbol # Annotation position: (:middle = middle of vector, :end = end of vector. :middle only allowed when plottype == :line.)
-	annotationanchor::Symbol # Annotation anchor: (:left, :center, :right)
+	annotationpos::Symbol # Annotation position: (:middle/:mid = middle of vector, :end = end of vector. :middle only allowed when plottype == :line.)
+	annotationanchor::Tuple{Symbol,Symbol} # Annotation anchor: (:left, :center, :right)
 	annotationoffset::SVector{2,Float64}
 	annotationsize::Int64 # Annotation font size.
 	linewidth::Float64 # Line width.
@@ -28,9 +28,9 @@ struct V2
 
     function V2(value;
 		o=[0.,0.], pt=:line, arrow=:arrow, l=nothing,
-		a=nothing, ap=:end, aa=:left, ao=[0.1, 0], asz=20,
+		a=nothing, ap=:end, aa=:left, ao=[10., 0.], asz=20,
 		lw=1., ls=:solid, c=:auto)
-		new(value, o, pt, arrow, l, a, ap, aa, ao, asz, lw, ls, c)
+		new(value, o, pt, arrow, l, a, ap, isa(aa, Symbol) ? (aa, :center) : aa, ao, asz, lw, ls, c)
 	end
 end
 
@@ -95,11 +95,12 @@ function Makie.plot(vectors::Vararg{Union{V2,Nothing}}; kw...)
 		if v.annotation != nothing
 			ap = v.annotationpos
 			ao = v.annotationoffset
-			aa = v.annotationanchor
-			text!(axis, [o + ao + (v.value * (ap == :middle ? 0.5 : 1))];
+			text!(axis, [o + (v.value * (ap == :middle || ap == :mid ? 0.5 : 1))];
 				text=(contains(v.annotation, "\$") ?
 						L"%$(v.annotation)" : v.annotation),
-				align=(aa, :center), fontsize=v.annotationsize)
+				align=v.annotationanchor,
+			offset=ao,
+			fontsize=v.annotationsize)
 		end
 	end
 
@@ -173,12 +174,12 @@ md"""
 let
 	v = [4, 1]; w = [-2, 2]
 	plot(
-		V2(v, lw=2, a=L"v", ap=:middle, ao=[0, 0.2], c=1),
-		V2(w, lw=2, a=L"w", ap=:middle, c=2),
-		V2(v+w, lw=4, a=L"v+w", ap=:middle, aa=:right, ao=[-0.15, 0.1]),
-		V2(v-w, lw=4, a=L"v-w", ap=:middle, ao=[0., 0.15]),
-		V2(w, o=v, a=L"+w", ap=:middle, ls=:dash, c=2),
-		V2(-w, o=v, a=L"-w", ap=:middle, ls=:dash, c=2),
+		V2(v, lw=2, a=L"v", ap=:mid, aa=(:right, :bottom), ao=[5, 10], c=1),
+		V2(w, lw=2, a=L"w", ap=:mid, c=2),
+		V2(v+w, lw=4, a=L"v+w", ap=:mid, aa=:right, ao=[-10, 0.]),
+		V2(v-w, lw=4, a=L"v-w", ap=:mid, aa=(:left, :bottom)),
+		V2(w, o=v, a=L"+w", ap=:mid, ls=:dash, c=2),
+		V2(-w, o=v, a=L"-w", ap=:mid, ls=:dash, c=2),
 	)
 end
 
@@ -216,12 +217,12 @@ So, $\b{v} = \v{3\\3}$, and $\b{w} = \v{2\\-2}$.
 let
 	v = [3, 3]; w = [2, -2]
 	plot(
-		V2(v, lw=2, a=L"v", ap=:middle, ao=[0., 0.3], c=1),
-		V2(w, lw=2, a=L"w", ap=:middle, ao=[0., 0.25], c=2),
-		V2(v+w, lw=4, a=L"v+w", ap=:middle, ao=[0, -0.3]),
-		V2(v-w, lw=4, a=L"v-w", ap=:middle),
-		V2(w, o=v, a=L"+w", ap=:middle, ao=[0., 0.15], ls=:dash, c=2),
-		V2(-w, o=v, a=L"-w", ap=:middle, ao=[0., 0.15], ls=:dash, c=2),
+		V2(v, lw=2, a=L"v", ap=:mid, aa=(:left, :top), c=1),
+		V2(w, lw=2, a=L"w", ap=:mid, aa=(:left, :bottom), c=2),
+		V2(v+w, lw=4, a=L"v+w", ap=:mid, aa=(:left, :top)),
+		V2(v-w, lw=4, a=L"v-w", ap=:mid),
+		V2(w, o=v, a=L"+w", ap=:mid, aa=(:left, :bottom), ls=:dash, c=2),
+		V2(-w, o=v, a=L"-w", ap=:mid, aa=(:left, :bottom), ls=:dash, c=2),
 	)
 end
 
@@ -353,14 +354,14 @@ Reproducing Fig. 1.1, and adding the other diagonal, $\b{v} - \b{w} = \v{5\\0},$
 let
 	v = [4, 2]; w = [-1, 2]
 	plot(
-		V2(2v, a=L"2v", ap=:middle, ao=[0, -0.2], lw=4),
-		V2(v, lw=2, a=L"v", ap=:middle, ao=[0., -0.15], c=2),
-		V2(w, lw=2, a=L"w", ap=:middle, c=3),
-		V2(v+w, lw=2, a=L"v+w", ap=:middle, ao=[0.75, 0.75]),
-		V2(v, o=w, c=2, a=L"+v", ap=:middle, aa=:right, ao=[0, 0.15], ls=:dash),
-		V2(w, o=v, c=3, a=L"+w", ap=:middle, ls=:dash),
-		V2(v-w, o=w, c=4, a=L"v-w", ap=:middle, aa=:right, ao=[-0.5, 0.2], ls=:dash),
-		V2(v-w, o=v+w, c=4, a=L"+(v-w)", ap=:middle, aa=:center, ao=[0, -0.15], ls=:dash),
+		V2(2v, a=L"2v", ap=:mid, aa=(:left, :top), lw=4),
+		V2(v, lw=2, a=L"v", ap=:mid, aa=(:left, :top), c=2),
+		V2(w, lw=2, a=L"w", ap=:mid, c=3),
+		V2(v+w, lw=2, a=L"v+w", ap=:mid, aa=(:left, :bottom), ao=[20, 5.]),
+		V2(v-w, o=w, c=4, a=L"v-w", ap=:mid, aa=(:right, :bottom), ao=[-20, 5.], ls=:dash),
+		V2(v, o=w, c=2, a=L"+v", ap=:mid, aa=:right, ao=[-20, .0], ls=:dash),
+		V2(w, o=v, c=3, a=L"+w", ap=:mid, ls=:dash),
+		V2(v-w, o=v+w, c=4, a=L"+(v-w)", ap=:mid, aa=(:center, :top), ao=[0., -5], ls=:dash),
 	)
 end
 
@@ -379,7 +380,7 @@ three_corners = [1;1;;1;3;;4;2] # each column is a corner
 
 # ╔═╡ 9bbff24a-623a-403d-85df-109bfebd6c3b
 plot(map(corner -> V2(corner[2]; a=L"c%$(corner[1])", pt=:point, c=1),
-	enumerate(eachcol(three_corners)))...)
+	enumerate(eachcol(three_corners)))...; xlims=(0, 5))
 
 # ╔═╡ c36df7f9-e76a-45d6-aecc-f2c3d2e69ffa
 md"""
@@ -405,7 +406,7 @@ let
 	corners_axes = zip(pgram_corners, axes)
 	map(
 		corners_axis -> plot(
-			map(corner -> V2(corner[2]; a=L"c%$(corner[1])", pt=:point, ao=[0.2, 0.05], c=1),
+			map(corner -> V2(corner[2]; a=L"c%$(corner[1])", pt=:point, c=1),
 				enumerate(eachcol(corners_axis[1])))...;
 					fig=fig, axis=corners_axis[2], xlims=(-3,5), ylims=(-1,5)
 		), corners_axes
@@ -510,7 +511,7 @@ end
 
 # ╔═╡ 62cea919-4d7a-4432-b823-dfe16284fcf6
 let
-	Vectors_clock = map(iv -> V2(last(iv); a="$(first(iv))", aa=:center, ao=last(iv) * 0.1, c=:black), eachrow(V_clock) |> enumerate)
+	Vectors_clock = map(iv -> V2(last(iv); a="$(first(iv))", aa=:center, ao=last(iv) * 20, c=:black), eachrow(V_clock) |> enumerate)
 	plot(Vectors_clock...; xlims=(-1.5, 1.5), ylims=(-1.5, 1.5))
 end
 
@@ -530,7 +531,7 @@ let
 		map(
 			iv -> first(iv) == 6 ? nothing :
 			V2(last(iv);
-				a="$(first(iv))", aa=:center, ao=last(iv) * 0.075,
+				a="$(first(iv))", aa=:center, ao=last(iv) * 10,
 				c=:black, o=[0,-1]),
 			eachrow(V_clock_6_origin) |> enumerate)...;
 		xlims=(-1.5, 1.5), ylims=(-1.1, 1.3)
@@ -593,8 +594,7 @@ let
 		V2(-3v+3w; o=2v-w, l="c+d=1", arrow=:none, ls=:dash, lw=2),
 		map(cd ->
 			V2(first(cd)*v + last(cd)*w; # Using matmul: [v w] * cd
-				pt=:point, c=:black, a=L"%$(cd[1])v + %$(cd[2])w",
-				ao=[0.3, 0]), 
+				pt=:point, c=:black, a=L"%$(cd[1])v + %$(cd[2])w"), 
 			eachrow([C D])
 		)...; xlims=(-5, 17)
 	)
@@ -614,7 +614,7 @@ let
 		V2(w, l=L"w", lw=2),
 		V2(2(v+w); o=-(v+w), l=L"c=d", arrow=:none, ls=:dash, lw=2),
 		map(c ->
-			V2(c*v + c*w; pt=:point, c=:black, a=L"%$c(v + w)", ao=[0.3, 0.]), 
+			V2(c*v + c*w; pt=:point, c=:black, a=L"%$c(v + w)"), 
 			C
 		)...; xlims=(-8, 11)
 	)
