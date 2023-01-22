@@ -50,7 +50,7 @@ parse(RGB, String(:red))
 function Makie.plot(vectors::Vararg{Union{V2,Nothing}}; kw...)
 	vectors = filter(v -> v != nothing, vectors)
 	fig = haskey(kw, :fig) ? kw[:fig] : haskey(kw, :axis) ? nothing : Figure()
-	axis = haskey(kw, :axis) ? kw[:axis] : Axis(fig[1, 1], aspect=1)
+	axis = haskey(kw, :axis) ? kw[:axis] : Axis(fig[1, 1], aspect=DataAspect())
 
 	tri = BezierPath([
 		MoveTo(Point2f(-0.5, -1)), LineTo(0, 0), LineTo(0.5, -1), ClosePath()
@@ -402,7 +402,7 @@ let
 		possible_fourth_corners
 	)
 	fig = Figure()
-	axes = map(p -> Axis(fig[p...], aspect=1), ([1, 1], [2, 1], [1, 2]))
+	axes = map(p -> Axis(fig[p...], aspect=DataAspect()), ([1, 1], [2, 1], [1, 2]))
 	corners_axes = zip(pgram_corners, axes)
 	map(
 		corners_axis -> plot(
@@ -631,7 +631,7 @@ This area is the parallelogram with points $\b{0}, \b{v}, \b{v}+\b{w}, \b{w}$:
 let
 	v = [6, 1]; w = [1, 6]
 	fig = Figure()
-	axis = Axis(fig[1, 1], aspect=1)
+	axis = Axis(fig[1, 1], aspect=DataAspect())
 	plot!(axis, Makie.Polygon(Point2f[[0, 0], v, v+w, w]), color=:lightgray,
 		label=L"cv + dw : 0 \leq c \leq 1, 0 \leq d \leq 1")
 	plot(
@@ -654,7 +654,7 @@ md"""
 let
 	v = [6, 1]; w = [1, 6]
 	fig = Figure()
-	axis = Axis(fig[1, 1], aspect=1)
+	axis = Axis(fig[1, 1], aspect=DataAspect())
 	plot!(axis, Makie.Polygon(Point2f[[0., 0.], 4v, 4w]); color=:lightgray,
 		label=L"cv + dw : c \geq 0, d \geq 0")
 	plot(
