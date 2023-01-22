@@ -28,8 +28,7 @@ struct V2
 
     function V2(value;
 		o=[0.,0.], pt=:line, arrow=:arrow, l=nothing,
-		a=nothing, ap=:end, aa=:left,
-		ao=(ap==:middle ? [0.,0.] : aa == :left ? [0., 0.] : [0.,0.]), asz=20,
+		a=nothing, ap=:end, aa=:left, ao=[0.1, 0], asz=20,
 		lw=1., ls=:solid, c=:auto)
 		new(value, o, pt, arrow, l, a, ap, aa, ao, asz, lw, ls, c)
 	end
@@ -47,30 +46,27 @@ parse(RGB, String(:red))
 # ╔═╡ e9539e47-dc78-43e7-81de-f3e3267ed197
 # kw args:
 #  - :xlims, :ylims
-#  - :
-function Makie.plot(vectors::Vararg{V2}; kw...)
-	if haskey(kw, :pos)
-		f = nothing
-		pos = kw[:pos]
-	else
-		f = Figure()
-		pos = Axis(f[1, 1])
-	end
+#  - :fig, :axis
+function Makie.plot(vectors::Vararg{Union{V2,Nothing}}; kw...)
+	vectors = filter(v -> v != nothing, vectors)
+	fig = haskey(kw, :fig) ? kw[:fig] : haskey(kw, :axis) ? nothing : Figure()
+	axis = haskey(kw, :axis) ? kw[:axis] : Axis(fig[1, 1], aspect=1)
 
 	tri = BezierPath([
 		MoveTo(Point2f(-0.5, -1)), LineTo(0, 0), LineTo(0.5, -1), ClosePath()
 	])
 	pix_scale_2d = camera(Scene()).pixel_space[][1:2,1:2]
 	for (i, v) in enumerate(vectors)
+		label = v.label != nothing ? L"%$(v.label)" : nothing
 		color = (isa(v.color, Symbol) || isa(v.color, String)) && v.color != :auto ?
 			Colors.parse(RGB, String(v.color)) :
 			default_colors[isa(v.color, Int64) ? v.color : i]
 		o = v.origin
 		if v.plottype == :line
 			if v.arrow == :none
-				lines!(pos,
+				lines!(axis,
 					[o, o + v.value];
-					linewidth=v.linewidth, linestyle=v.linestyle, label=v.label, linecolor=color,
+					linewidth=v.linewidth, linestyle=v.linestyle, label=label, linecolor=color,
 				)
 			else
 				arrowsize = 15 # In pixel space
@@ -79,13 +75,13 @@ function Makie.plot(vectors::Vararg{V2}; kw...)
 				# Subtract arrow in pixel space, in the directiontion of the value.
 				val_pixels -= normalize(val_pixels) * arrowsize*2
 				# Convert value back to pixel space.
-				lines!(pos,
+				lines!(axis,
 					[o, o + pix_scale_2d * val_pixels];
-					linewidth=v.linewidth, linestyle=v.linestyle, label=v.label, color=color,
+					linewidth=v.linewidth, linestyle=v.linestyle, label=label, color=color,
 				)
 				# Makie bug - `rotations` doesn't take axis scale into account: https://github.com/MakieOrg/Makie.jl/issues/860
 				marker_v = pix_scale_2d * v.value
-				scatter!(
+				scatter!(axis,
 					[o + v.value];
 					marker=tri,
 					markersize=arrowsize,
@@ -94,24 +90,30 @@ function Makie.plot(vectors::Vararg{V2}; kw...)
 				)
 			end
 		else
-			scatter!(pos, [v.value.x], [v.value.y]; label=v.label, color=color)
+			scatter!(axis, [v.value.x], [v.value.y]; label=label, color=color)
 		end
 		if v.annotation != nothing
 			ap = v.annotationpos
 			ao = v.annotationoffset
 			aa = v.annotationanchor
-			text!(pos, [o + ao + (v.value * (ap == :middle ? 0.5 : 1))];
-			text=(contains(v.annotation, "\$") ? L"%$(v.annotation)" : v.annotation), align=(aa, :center), fontsize=v.annotationsize)
+			text!(axis, [o + ao + (v.value * (ap == :middle ? 0.5 : 1))];
+				text=(contains(v.annotation, "\$") ?
+						L"%$(v.annotation)" : v.annotation),
+				align=(aa, :center), fontsize=v.annotationsize)
 		end
 	end
 
 	if haskey(kw, :xlims)
-		xlims!(pos, kw[:xlims]...)
+		xlims!(axis, kw[:xlims]...)
 	end
 	if haskey(kw, :ylims)
-		ylims!(pos, kw[:ylims]...)
+		ylims!(axis, kw[:ylims]...)
 	end
-	return f
+	if length(filter(v -> v.label != nothing, vectors)) > 0
+		fig[1, 2] = Legend(fig, axis)
+	end
+
+	return fig
 end
 
 # ╔═╡ b8245233-055a-43b6-8170-70eeccf83495
@@ -172,11 +174,11 @@ let
 	v = [4, 1]; w = [-2, 2]
 	plot(
 		V2(v, lw=2, a=L"v", ap=:middle, ao=[0, 0.2], c=1),
-		V2(w, lw=2, a=L"w", ap=:middle, ao=[0.1, 0.], c=2),
+		V2(w, lw=2, a=L"w", ap=:middle, c=2),
 		V2(v+w, lw=4, a=L"v+w", ap=:middle, aa=:right, ao=[-0.15, 0.1]),
 		V2(v-w, lw=4, a=L"v-w", ap=:middle, ao=[0., 0.15]),
-		V2(w, o=v, a=L"+w", ap=:middle, ao=[0.1, 0.], ls=:dash, c=2),
-		V2(-w, o=v, a=L"-w", ap=:middle, ao=[0.1, 0.], ls=:dash, c=2),
+		V2(w, o=v, a=L"+w", ap=:middle, ls=:dash, c=2),
+		V2(-w, o=v, a=L"-w", ap=:middle, ls=:dash, c=2),
 	)
 end
 
@@ -217,7 +219,7 @@ let
 		V2(v, lw=2, a=L"v", ap=:middle, ao=[0., 0.3], c=1),
 		V2(w, lw=2, a=L"w", ap=:middle, ao=[0., 0.25], c=2),
 		V2(v+w, lw=4, a=L"v+w", ap=:middle, ao=[0, -0.3]),
-		V2(v-w, lw=4, a=L"v-w", ap=:middle, aa=:right, ao=[-0.1, 0]),
+		V2(v-w, lw=4, a=L"v-w", ap=:middle),
 		V2(w, o=v, a=L"+w", ap=:middle, ao=[0., 0.15], ls=:dash, c=2),
 		V2(-w, o=v, a=L"-w", ap=:middle, ao=[0., 0.15], ls=:dash, c=2),
 	)
@@ -331,8 +333,8 @@ let
 	end
 	plot(map(
 		cd -> V2(cd[1]*[2,1] + cd[2]*[0, 1];
-		pt=:point, a=L"c=%$(cd[1]), d=%$(cd[2])", ao=[0.05, 0.], c=1), CD
-	)...; xlims=(-1, 5))
+		pt=:point, a=L"c=%$(cd[1]), d=%$(cd[2])", c=1), CD
+	)...; xlims=(-1, 6))
 end
 
 # ╔═╡ 0a1a8900-0da3-4c2c-849b-b5ebc6d979e2
@@ -352,13 +354,13 @@ let
 	v = [4, 2]; w = [-1, 2]
 	plot(
 		V2(2v, a=L"2v", ap=:middle, ao=[0, -0.2], lw=4),
-		V2(v, lw=2, a=L"v", ap=:middle, ao=[0., -0.15], c=1),
-		V2(w, lw=2, l=L"w", c=2),
+		V2(v, lw=2, a=L"v", ap=:middle, ao=[0., -0.15], c=2),
+		V2(w, lw=2, a=L"w", ap=:middle, c=3),
 		V2(v+w, lw=2, a=L"v+w", ap=:middle, ao=[0.75, 0.75]),
-		V2(v, o=w, c=1, a=L"+v", ap=:middle, aa=:right, ao=[0, 0.2], ls=:dash),
-		V2(w, o=v, c=2, a=L"+w", ap=:middle, ao=[0.1, 0.1], ls=:dash),
-		V2(v-w, o=w, c=3, a=L"v-w", ap=:middle, aa=:right, ao=[-0.5, 0.2], ls=:dash),
-		V2(v-w, o=v+w, c=3, a=L"+(v-w)", ap=:middle, aa=:center, ao=[0, 0.2], ls=:dash),
+		V2(v, o=w, c=2, a=L"+v", ap=:middle, aa=:right, ao=[0, 0.15], ls=:dash),
+		V2(w, o=v, c=3, a=L"+w", ap=:middle, ls=:dash),
+		V2(v-w, o=w, c=4, a=L"v-w", ap=:middle, aa=:right, ao=[-0.5, 0.2], ls=:dash),
+		V2(v-w, o=v+w, c=4, a=L"+(v-w)", ap=:middle, aa=:center, ao=[0, -0.15], ls=:dash),
 	)
 end
 
@@ -376,7 +378,7 @@ Let's plot the three given corners:
 three_corners = [1;1;;1;3;;4;2] # each column is a corner
 
 # ╔═╡ 9bbff24a-623a-403d-85df-109bfebd6c3b
-plot(map(corner -> V2(corner[2]; a=L"c%$(corner[1])", ao=[0.05, 0], pt=:point, c=1),
+plot(map(corner -> V2(corner[2]; a=L"c%$(corner[1])", pt=:point, c=1),
 	enumerate(eachcol(three_corners)))...)
 
 # ╔═╡ c36df7f9-e76a-45d6-aecc-f2c3d2e69ffa
@@ -398,16 +400,17 @@ let
 		fourth_corner -> hcat(three_corners, fourth_corner),
 		possible_fourth_corners
 	)
-	f = Figure()
-	positions = map(p -> Axis(f[p...]), ([1, 1], [2, 1], [1, 2]))
-	corners_positions = zip(pgram_corners, positions)
+	fig = Figure()
+	axes = map(p -> Axis(fig[p...], aspect=1), ([1, 1], [2, 1], [1, 2]))
+	corners_axes = zip(pgram_corners, axes)
 	map(
-		corners_pos -> plot(
+		corners_axis -> plot(
 			map(corner -> V2(corner[2]; a=L"c%$(corner[1])", pt=:point, ao=[0.2, 0.05], c=1),
-				enumerate(eachcol(corners_pos[1])))...; pos=corners_pos[2], xlims=(-3,5), ylims=(-1,5)
-		), corners_positions
+				enumerate(eachcol(corners_axis[1])))...;
+					fig=fig, axis=corners_axis[2], xlims=(-3,5), ylims=(-1,5)
+		), corners_axes
 	)
-	f
+	fig
 end
 
 # ╔═╡ df1c4083-065b-4bca-a9a0-f70ed6bf4b52
@@ -507,7 +510,7 @@ end
 
 # ╔═╡ 62cea919-4d7a-4432-b823-dfe16284fcf6
 let
-	Vectors_clock = map(iv -> V2(last(iv); a="$(first(iv))", aa=:center, ao=last(iv) * 0.1, l="", c=:black), eachrow(V_clock) |> enumerate)
+	Vectors_clock = map(iv -> V2(last(iv); a="$(first(iv))", aa=:center, ao=last(iv) * 0.1, c=:black), eachrow(V_clock) |> enumerate)
 	plot(Vectors_clock...; xlims=(-1.5, 1.5), ylims=(-1.5, 1.5))
 end
 
@@ -523,8 +526,15 @@ md"Now, with the origin at 6:00..."
 # ╔═╡ 46a4d33b-2ca1-476b-85bf-9f6c4c3a62b7
 let
 	V_clock_6_origin = V_clock .+ [0 1]
-	Vectors_clock = map(iv -> V2(last(iv); a="$(first(iv) == 6 ? "" : first(iv))", aa=:center, ao=last(iv) * 0.075, l="", c=:black, o=[0,-1]), eachrow(V_clock_6_origin) |> enumerate)
-	plot(Vectors_clock...; xlims=(-1.5, 1.5), ylims=(-1.5, 1.5))
+	plot(
+		map(
+			iv -> first(iv) == 6 ? nothing :
+			V2(last(iv);
+				a="$(first(iv))", aa=:center, ao=last(iv) * 0.075,
+				c=:black, o=[0,-1]),
+			eachrow(V_clock_6_origin) |> enumerate)...;
+		xlims=(-1.5, 1.5), ylims=(-1.1, 1.3)
+	)
 end
 
 # ╔═╡ 163f44c4-546f-4a29-a028-52d9b4f6be81
@@ -542,7 +552,7 @@ let
 		V2(v, a=L"v"),
 		V2(w, a=L"w"),
 		V2(v - w; o=w, arrow=:none, ls=:dash),
-		V2(0.5(v + w); a=L"u = \frac{1}{2}(v + w)", ao=[0.1, 0], pt=:point);
+		V2(0.5(v + w); a=L"u = \frac{1}{2}(v + w)", pt=:point);
 		xlims=(0, 7)
 	)
 end
@@ -556,12 +566,14 @@ md"""
 let
 	v = [6, 1]; w = [1, 6]
 	plot(
-		V2(v, a=L"v"),
-		V2(w, a=L"w"),
+		V2(v, a=L"v", lw=2),
+		V2(w, a=L"w", lw=2),
 		V2(v - w; o=w, arrow=:none, ls=:dash),
-		V2(0.75v + 0.25w; a=L"u = \frac{3}{4}v +\frac{1}{4}w", ao=[0.1, 0], pt=:point),
-		V2(0.25v + 0.25w; a=L"u = \frac{1}{4}v + \frac{1}{4}w", ao=[0.1, 0], pt=:point),
-		V2(v + w; a=L"u = v + w", pt=:point),
+		V2(0.75v + 0.25w; a=L"u = \frac{3}{4}v +\frac{1}{4}w", pt=:point),
+		V2(0.25v + 0.25w; a=L"u = \frac{1}{4}v + \frac{1}{4}w", pt=:point),
+		V2(w; o=v, a=L"+w", ap=:middle, ls=:dash, c=2),
+		V2(v + w; a=L"u = v + w", pt=:point);
+		xlims=(-0.5, 9)
 	)
 end
 
@@ -576,15 +588,15 @@ let
 	C = -1:0.25:2
 	D = 1 .- C
 	plot(
-		V2(v, l=L"v"),
-		V2(w, l=L"w"),
-		V2(-3v+3w; o=2v-w, l=L"c+d=1", arrow=:none, ls=:dash, lw=2),
+		V2(v, l=L"v", lw=2),
+		V2(w, l=L"w", lw=2),
+		V2(-3v+3w; o=2v-w, l="c+d=1", arrow=:none, ls=:dash, lw=2),
 		map(cd ->
 			V2(first(cd)*v + last(cd)*w; # Using matmul: [v w] * cd
 				pt=:point, c=:black, a=L"%$(cd[1])v + %$(cd[2])w",
 				ao=[0.3, 0]), 
 			eachrow([C D])
-		)...; xlims=(-5, 15)
+		)...; xlims=(-5, 17)
 	)
 end
 
@@ -598,13 +610,13 @@ let
 	v = [6, 1]; w = [1, 6]
 	C = -1:0.25:1
 	plot(
-		V2(v, l=L"v"),
-		V2(w, l=L"w"),
+		V2(v, l=L"v", lw=2),
+		V2(w, l=L"w", lw=2),
 		V2(2(v+w); o=-(v+w), l=L"c=d", arrow=:none, ls=:dash, lw=2),
 		map(c ->
 			V2(c*v + c*w; pt=:point, c=:black, a=L"%$c(v + w)", ao=[0.3, 0.]), 
 			C
-		)...; xlims=(-8, 10)
+		)...; xlims=(-8, 11)
 	)
 end
 
@@ -618,16 +630,19 @@ This area is the parallelogram with points $\b{0}, \b{v}, \b{v}+\b{w}, \b{w}$:
 # ╔═╡ eeaf50ba-9f98-4747-afa5-a9ed66bc4d77
 let
 	v = [6, 1]; w = [1, 6]
-	shaded_area = Shape(map(Tuple, [[0, 0], v, v+w, w]))
-	plt = plot(
+	fig = Figure()
+	axis = Axis(fig[1, 1], aspect=1)
+	plot!(axis, Makie.Polygon(Point2f[[0, 0], v, v+w, w]), color=:lightgray,
+		label=L"cv + dw : 0 \leq c \leq 1, 0 \leq d \leq 1")
+	plot(
 		V2(v, a=L"v", c=1, lw=3),
 		V2(w, a=L"w", ao=[0, 0.3], c=2, lw=3),
-		V2(v, o=w, c=1, ls=:dash),
-		V2(w, o=v, c=2, ls=:dash, a=L"v+w");
-		xlim=(0, 8), ylim=(0, 8)
+		V2(v, o=w, c=1, ls=:dash, lw=2),
+		V2(w, o=v, a=L"v+w", c=2, ls=:dash, lw=2);
+		fig=fig, axis=axis, xlims=(0, 8), ylims=(0, 8)
 	)
-	plot!(shaded_area, fillcolor = plot_color(:gray, 0.3), linecolor=nothing, label=L"cv + dw : 0 \leq c \leq 1, 0 \leq d \leq 1")
-	plt
+	fig[1, 2] = Legend(fig, axis)
+	fig
 end
 
 # ╔═╡ 3d9b7861-5014-49ec-92dc-4784dfde036c
@@ -638,14 +653,17 @@ md"""
 # ╔═╡ 1b5c5a4b-a413-4d05-b220-f3e334e0a3c5
 let
 	v = [6, 1]; w = [1, 6]
-	shaded_area = Shape(map(Tuple, [[0, 0], 4v, 4w]))
-	plt = plot(
+	fig = Figure()
+	axis = Axis(fig[1, 1], aspect=1)
+	plot!(axis, Makie.Polygon(Point2f[[0., 0.], 4v, 4w]); color=:lightgray,
+		label=L"cv + dw : c \geq 0, d \geq 0")
+	plot(
 		V2(v, a=L"v", c=1, lw=3),
 		V2(w, a=L"w", c=2, lw=3);
-		xlim=(0, 12), ylim=(0, 12)
+		fig=fig, axis=axis, xlims=(0, 12), ylims=(0, 12)
 	)
-	plot!(shaded_area, fillcolor = plot_color(:gray, 0.3), linecolor=nothing, label=L"cv + dw : c \geq 0, d \geq 0")
-	plt
+	fig[1, 2] = Legend(fig, axis)
+	fig
 end
 
 # ╔═╡ 118e1443-63b3-47d3-aa71-c8ed8a385865
