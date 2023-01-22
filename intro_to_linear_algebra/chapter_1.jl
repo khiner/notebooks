@@ -5,10 +5,10 @@ using Markdown
 using InteractiveUtils
 
 # ╔═╡ d3525d21-d733-4b66-84ad-13fa437dd8bf
-using LaTeXStrings, StaticArrays, GLMakie, Colors
+using LaTeXStrings, StaticArrays, GLMakie, Colors, LinearAlgebra
 
-# ╔═╡ 5c1f27a1-a3d1-420c-938e-0fd665d973ca
-using LinearAlgebra
+# ╔═╡ 90ee5252-eafa-44fe-96ed-c68ea5022d14
+project = Makie.project
 
 # ╔═╡ c39fc80a-44a8-42d8-911c-bf1c937e6bba
 struct V2
@@ -37,12 +37,6 @@ end
 # ╔═╡ 9ba81f31-d97d-4521-ba04-56faba024708
 default_colors = distinguishable_colors(10, [RGB(1,1,1), RGB(0,0,0)], dropseed=true)
 
-# ╔═╡ f1264c36-0526-4dc5-81c5-47d2a53416f5
-typeof(default_colors[1])
-
-# ╔═╡ cedc211f-2594-48f3-a628-f07e6356ee82
-parse(RGB, String(:red))
-
 # ╔═╡ e9539e47-dc78-43e7-81de-f3e3267ed197
 # kw args:
 #  - :xlims, :ylims
@@ -51,55 +45,55 @@ function Makie.plot(vectors::Vararg{Union{V2,Nothing}}; kw...)
 	vectors = filter(v -> v != nothing, vectors)
 	fig = haskey(kw, :fig) ? kw[:fig] : haskey(kw, :axis) ? nothing : Figure()
 	axis = haskey(kw, :axis) ? kw[:axis] : Axis(fig[1, 1], aspect=DataAspect())
+	scene = Scene()
 
 	tri = BezierPath([
 		MoveTo(Point2f(-0.5, -1)), LineTo(0, 0), LineTo(0.5, -1), ClosePath()
 	])
-	pix_scale_2d = camera(Scene()).pixel_space[][1:2,1:2]
 	for (i, v) in enumerate(vectors)
+		o = v.origin
+		val = v.value
 		label = v.label != nothing ? L"%$(v.label)" : nothing
 		color = (isa(v.color, Symbol) || isa(v.color, String)) && v.color != :auto ?
 			Colors.parse(RGB, String(v.color)) :
 			default_colors[isa(v.color, Int64) ? v.color : i]
-		o = v.origin
 		if v.plottype == :line
 			if v.arrow == :none
 				lines!(axis,
-					[o, o + v.value];
-					linewidth=v.linewidth, linestyle=v.linestyle, label=label, linecolor=color,
+					[o, o + val];
+					linewidth=v.linewidth, linestyle=v.linestyle, label=label, color=color,
 				)
 			else
 				arrowsize = 15 # In pixel space
-				# Convert scene value to pix value.
-				val_pixels = (pix_scale_2d ^ -1) * v.value
-				# Subtract arrow in pixel space, in the directiontion of the value.
-				val_pixels -= normalize(val_pixels) * arrowsize*2
-				# Convert value back to pixel space.
+				# Convert data value to pixel value,
+				# subtract arrow in pixel space (in the direction of the value),
+				# and convert value back to pixel space.
+				origin_px = Point2f(project(scene.camera, :data, :pixel, (0., 0.)))
+				val_px = Point2f(project(scene.camera, :data, :pixel, val)) - origin_px
+				val_minus_arrow = Point2f(project(
+					scene.camera, :pixel, :data, val_px - normalize(val_px) * arrowsize + origin_px
+				))
 				lines!(axis,
-					[o, o + pix_scale_2d * val_pixels];
+					[o, o + val_minus_arrow];
 					linewidth=v.linewidth, linestyle=v.linestyle, label=label, color=color,
 				)
-				# Makie bug - `rotations` doesn't take axis scale into account: https://github.com/MakieOrg/Makie.jl/issues/860
-				marker_v = pix_scale_2d * v.value
 				scatter!(axis,
-					[o + v.value];
+					[o + val];
 					marker=tri,
 					markersize=arrowsize,
-					rotations=[-pi/2 + atan(marker_v[2], marker_v[1])],
+					rotations=[-pi/2 + atan(val[2], val[1])],
 					color=color,
 				)
 			end
 		else
-			scatter!(axis, [v.value.x], [v.value.y]; label=label, color=color)
+			scatter!(axis, [val.x], [val.y]; label=label, color=color)
 		end
 		if v.annotation != nothing
 			ap = v.annotationpos
-			ao = v.annotationoffset
-			text!(axis, [o + (v.value * (ap == :middle || ap == :mid ? 0.5 : 1))];
-				text=(contains(v.annotation, "\$") ?
-						L"%$(v.annotation)" : v.annotation),
+			text!(axis, [o + (val * (ap == :middle || ap == :mid ? 0.5 : 1))];
+				text=(contains(v.annotation, "\$") ? L"%$(v.annotation)" : v.annotation),
 				align=v.annotationanchor,
-			offset=ao,
+			offset=v.annotationoffset,
 			fontsize=v.annotationsize)
 		end
 	end
@@ -217,12 +211,13 @@ So, $\b{v} = \v{3\\3}$, and $\b{w} = \v{2\\-2}$.
 let
 	v = [3, 3]; w = [2, -2]
 	plot(
-		V2(v, lw=2, a=L"v", ap=:mid, aa=(:left, :top), c=1),
-		V2(w, lw=2, a=L"w", ap=:mid, aa=(:left, :bottom), c=2),
-		V2(v+w, lw=4, a=L"v+w", ap=:mid, aa=(:left, :top)),
-		V2(v-w, lw=4, a=L"v-w", ap=:mid),
+		V2(v, lw=2, a=L"v", aa=(:center, :left), c=1),
+		V2(w, lw=2, a=L"w", aa=(:center, :top), c=2),
+		V2(v+w, lw=4, a=L"v+w", aa=(:left, :center)),
+		V2(v-w, lw=4, a=L"v-w", aa=(:center, :left)),
 		V2(w, o=v, a=L"+w", ap=:mid, aa=(:left, :bottom), ls=:dash, c=2),
-		V2(-w, o=v, a=L"-w", ap=:mid, aa=(:left, :bottom), ls=:dash, c=2),
+		V2(-w, o=v, a=L"-w", ap=:mid, aa=(:left, :bottom), ls=:dash, c=2);
+		xlims=(-1, 6), ylims=(-3, 6)
 	)
 end
 
@@ -354,14 +349,15 @@ Reproducing Fig. 1.1, and adding the other diagonal, $\b{v} - \b{w} = \v{5\\0},$
 let
 	v = [4, 2]; w = [-1, 2]
 	plot(
-		V2(2v, a=L"2v", ap=:mid, aa=(:left, :top), lw=4),
+		V2(2v, a=L"2v", lw=4),
 		V2(v, lw=2, a=L"v", ap=:mid, aa=(:left, :top), c=2),
 		V2(w, lw=2, a=L"w", ap=:mid, c=3),
-		V2(v+w, lw=2, a=L"v+w", ap=:mid, aa=(:left, :bottom), ao=[20, 5.]),
-		V2(v-w, o=w, c=4, a=L"v-w", ap=:mid, aa=(:right, :bottom), ao=[-20, 5.], ls=:dash),
-		V2(v, o=w, c=2, a=L"+v", ap=:mid, aa=:right, ao=[-20, .0], ls=:dash),
-		V2(w, o=v, c=3, a=L"+w", ap=:mid, ls=:dash),
-		V2(v-w, o=v+w, c=4, a=L"+(v-w)", ap=:mid, aa=(:center, :top), ao=[0., -5], ls=:dash),
+		V2(v+w, lw=2, a=L"v+w", aa=(:center, :bottom)),
+		V2(v-w, o=w, c=4, a=L"v-w", ls=:dash),
+		V2(v, o=w, c=2, a=L"+v", ap=:mid, aa=:right, ao=[-20, .0], ls=:dash, arrow=:none),
+		V2(w, o=v, c=3, a=L"+w", ap=:mid, ls=:dash, arrow=:none),
+		V2(v-w, o=v+w, c=4, a=L"+(v-w)", ap=:mid, aa=(:center, :top), ao=[0., -5], ls=:dash, arrow=:none);
+		xlims=(-2, 9), ylims=(-1, 5)
 	)
 end
 
@@ -568,10 +564,10 @@ let
 	v = [6, 1]; w = [1, 6]
 	plot(
 		V2(v, a=L"v", lw=2),
-		V2(w, a=L"w", lw=2),
+		V2(w, a=L"w", lw=2, aa=(:right, :bottom)),
 		V2(v - w; o=w, arrow=:none, ls=:dash),
-		V2(0.75v + 0.25w; a=L"u = \frac{3}{4}v +\frac{1}{4}w", pt=:point),
-		V2(0.25v + 0.25w; a=L"u = \frac{1}{4}v + \frac{1}{4}w", pt=:point),
+		V2(0.75v + 0.25w; a=L"u=\frac{3}{4}v+\frac{1}{4}w", pt=:point),
+		V2(0.25v + 0.25w; a=L"u=\frac{1}{4}v+\frac{1}{4}w", pt=:point),
 		V2(w; o=v, a=L"+w", ap=:middle, ls=:dash, c=2),
 		V2(v + w; a=L"u = v + w", pt=:point);
 		xlims=(-0.5, 9)
@@ -636,10 +632,10 @@ let
 		label=L"cv + dw : 0 \leq c \leq 1, 0 \leq d \leq 1")
 	plot(
 		V2(v, a=L"v", c=1, lw=3),
-		V2(w, a=L"w", ao=[0, 0.3], c=2, lw=3),
+		V2(w, a=L"w", aa=(:right, :bottom), c=2, lw=3),
 		V2(v, o=w, c=1, ls=:dash, lw=2),
-		V2(w, o=v, a=L"v+w", c=2, ls=:dash, lw=2);
-		fig=fig, axis=axis, xlims=(0, 8), ylims=(0, 8)
+		V2(w, o=v, a=L"v+w", aa=(:left, :bottom), c=2, ls=:dash, lw=2);
+		fig=fig, axis=axis, xlims=(0, 8.5), ylims=(0, 8)
 	)
 	fig[1, 2] = Legend(fig, axis)
 	fig
@@ -659,7 +655,7 @@ let
 		label=L"cv + dw : c \geq 0, d \geq 0")
 	plot(
 		V2(v, a=L"v", c=1, lw=3),
-		V2(w, a=L"w", c=2, lw=3);
+		V2(w, a=L"w", aa=(:right, :bottom), c=2, lw=3);
 		fig=fig, axis=axis, xlims=(0, 12), ylims=(0, 12)
 	)
 	fig[1, 2] = Legend(fig, axis)
@@ -2005,11 +2001,9 @@ version = "3.5.0+0"
 
 # ╔═╡ Cell order:
 # ╠═d3525d21-d733-4b66-84ad-13fa437dd8bf
-# ╠═5c1f27a1-a3d1-420c-938e-0fd665d973ca
+# ╠═90ee5252-eafa-44fe-96ed-c68ea5022d14
 # ╠═c39fc80a-44a8-42d8-911c-bf1c937e6bba
 # ╠═9ba81f31-d97d-4521-ba04-56faba024708
-# ╠═f1264c36-0526-4dc5-81c5-47d2a53416f5
-# ╠═cedc211f-2594-48f3-a628-f07e6356ee82
 # ╠═e9539e47-dc78-43e7-81de-f3e3267ed197
 # ╠═b8245233-055a-43b6-8170-70eeccf83495
 # ╠═71c1f166-c912-4fea-8d56-84acdc46c083
