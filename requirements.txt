@@ -1,0 +1,11 @@
+matplotlib
+seaborn
+pandas
+scipy
+pygal
+statsmodels
+scikit-learn
+numba
+pytest
+poppy
+notebook

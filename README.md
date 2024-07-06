@@ -29,9 +29,6 @@ Let me know via a GH issue if you run into problems here and I will fix.
 ```bash
 $ git clone git@github.com:khiner/notebooks.git && cd notebooks
 $ git submodule update --init --recursive
-$ xcode-select --install
-$ brew install pipenv
-$ pipenv install
-$ pipenv shell
-(notebooks)$ jupyter-notebook
+$ pip install -r requirements.txt
+$ jupyter-notebook
 ```
